@@ -21,6 +21,7 @@ class filemakerController extends Controller {
 	 */
 	public function navbarAction() {
 		$data = array();
-		return $this->render('filemakerBundle:blocs:navbar.html.twig', $data);
+		return $this->render('filemakerBundle:menus:navbar.html.twig', $data);
 	}
+
 }
