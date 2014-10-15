@@ -18,7 +18,7 @@ class filemakerservice {
 
 	public function __construct(ContainerInterface $container) {
 		$this->container = $container;
-		require_once(__DIR__.'/../../../../../Web Publishing/publishing-engine/php/mavericks/lib/php/FileMaker.php');
+		require_once(__DIR__.'/../../../../../../../../Web Publishing/publishing-engine/php/mavericks/lib/php/FileMaker.php');
 		// Create a new connection to FMPHP_Sample database.
 		// Location of FileMaker Server is assumed to be on the same machine,
 		//  thus we assume hostspec is api default of 'http://localhost' as specified
