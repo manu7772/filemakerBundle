@@ -9,18 +9,13 @@
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</button>
-			<a class="navbar-brand" href="{{ url('ensemble01filemaker_homepage') }}">{% block navbar-brand %}MARQUE{% endblock navbar-brand %}</a>
+			{% block navbar-brand %}<a class="navbar-brand" href="{{ url('ensemble01filemaker_homepage') }}">MARQUE</a>{% endblock navbar-brand %}
 		</div>
 		{% endblock navbar-header %}
 		<!-- Collect the nav links, forms, and other content for toggling -->
 		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 			{% block navbar-contenu %}
 			<ul class="nav navbar-nav">
-				{% block navbar-accueil %}
-				<li>
-					<a href="{{ url('ensemble01site_homepage') }}">Accueil</a>
-				</li>
-				{% endblock navbar-accueil %}
 				{% block navbar-menu %}
 				<!-- MENU PRINCIPAL NAVBAR -->
 				{% endblock navbar-menu %}

@@ -12,7 +12,7 @@ class filemakerservice {
 	protected $APIfm;		// objet FileMaker
 	protected $FMfind;		//
 
-	protected $dbname = "GEODIAG_SERVER";
+	protected $dbname = "GEODIAG_REF_WEB";
 	protected $dbuser = "sadmin";
 	protected $dbpass = "symfony76";
 
