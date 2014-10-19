@@ -12,9 +12,9 @@ class filemakerservice {
 	protected $APIfm;		// objet FileMaker
 	protected $FMfind;		//
 
-	protected $dbname = "GEODIAG_REF_WEB";
-	protected $dbuser = "Tech";
-	protected $dbpass = "geotech";
+	protected $dbname = "GEODIAG_SERVER";
+	protected $dbuser = "sadmin";
+	protected $dbpass = "symfony76";
 
 	public function __construct(ContainerInterface $container) {
 		$this->container = $container;
