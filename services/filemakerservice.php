@@ -21,6 +21,8 @@ class filemakerservice {
 	protected $dbname;				// nom de la base
 	protected $dbuser;				// login du Super Admin
 	protected $dbpass;				// mot de passe du Super Admin
+	protected $dbdescribe;			// description de la bd
+	protected $username;			// username
 	protected $loguser;				// login user
 	protected $logpass;				// pass user
 
@@ -54,12 +56,13 @@ class filemakerservice {
 	protected function param_findSadmin($file = null, $username = 'sadmin') {
 		$this->setSadminDefined(true);
 		$checkServer = array(
-			"dbname" => "nom"
+			"dbname" => "nom",
+			"dbdescribe" => "descriptif",
 			);
 		$checkUser = array(
-			/* "username", */
+			"username" => "username",
 			"dbuser" => "login",
-			"dbpass" => "pass"
+			"dbpass" => "pass",
 			);
 		if($file === null) $file = $this->APIfm_paramfile;
 		if(file_exists($file)) {
@@ -175,6 +178,30 @@ class filemakerservice {
 	 */
 	public function getName() {
 		return "filemaker-service";
+	}
+
+	/**
+	 * Nom de la base
+	 * @return string
+	 */
+	public function getBasename() {
+		return $this->dbname;
+	}
+
+	/**
+	 * username utilisateur
+	 * @return string
+	 */
+	public function getUsername() {
+		return $this->username;
+	}
+
+	/**
+	 * login utilisateur
+	 * @return string
+	 */
+	public function getUserlog() {
+		return $this->loguser;
 	}
 
 	/**
