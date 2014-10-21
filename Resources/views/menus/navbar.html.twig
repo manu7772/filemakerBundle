@@ -1,7 +1,7 @@
 {% block navbar %}
 <nav class="navbar navbar-inverse navbar-static-top" role="navigation">
 	<div class="container-fluid">
-		{% block navbar-header %}
+		{% block navbarheader %}
 		<div class="navbar-header">
 			<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1	">
 				<span class="sr-only">Menu</span>
@@ -9,21 +9,23 @@
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</button>
-			{% block navbar-brand %}<a class="navbar-brand" href="{{ url('ensemble01filemaker_homepage') }}">MARQUE</a>{% endblock navbar-brand %}
+			{% block navbarbrand %}
+			<a class="navbar-brand" href="#">MARQUE</a>
+			{% endblock navbarbrand %}
 		</div>
-		{% endblock navbar-header %}
+		{% endblock navbarheader %}
 		<!-- Collect the nav links, forms, and other content for toggling -->
 		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-			{% block navbar-contenu %}
+			{% block navbarcontenu %}
 			<ul class="nav navbar-nav">
-				{% block navbar-menu %}
+				{% block navbarmenu %}
 				<!-- MENU PRINCIPAL NAVBAR -->
-				{% endblock navbar-menu %}
+				{% endblock navbarmenu %}
 			</ul>
-			{% endblock navbar-contenu %}
-			{% block navbar-login-account %}
+			{% endblock navbarcontenu %}
+			{% block navbarloginaccount %}
 			<!-- MENU LOGIN NAVBAR -->
-			{% endblock navbar-login-account %}
+			{% endblock navbarloginaccount %}
 		</div><!-- /.navbar-collapse -->
 	</div>
 </nav>
