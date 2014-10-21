@@ -13,9 +13,7 @@ class filemakerservice {
 	protected $APIfm;				// objet FileMaker (accès user logged)
 	protected $APIfmSADMIN;			// objet FileMaker (accès Super Admin)
 	protected $FMfind;				//
-	
-	protected $APIfm_statut 	= false;	// statut de l'API : OK (true) ou erreur (false)
-	
+		
 	protected $APIfm_paramfile;		// fichier de paramètres de l'API FileMaker
 
 	protected $dbname;				// nom de la base
@@ -36,13 +34,16 @@ class filemakerservice {
 
 	public function __construct(ContainerInterface $container) {
 		$this->container = $container;
-		$this->APIfm_paramfile = __DIR__."../../../../../app/config/parameters_fm.xml";
-		$this->APIfm_statut = false;
+		$this->APIfm_paramfile = __DIR__."/../../../../../app/config/parameters_fm.xml";
+		// require_once("FileMaker.php");
 		if($this->param_findSadmin() === true) {
+			// echo('Test<br />');
 			$this->APIfmSADMIN = new FileMaker($this->dbname);
-			$this->APIfmSADMIN->setProperty('username',$this->dbuser);
-			$this->APIfmSADMIN->setProperty('password',$this->dbpass);
-			$this->APIfm_statut = true;
+			$this->APIfmSADMIN->setProperty('username', $this->dbuser);
+			$this->APIfmSADMIN->setProperty('password', $this->dbpass);
+			// echo("Login Super Admin : ".$this->dbuser."<br />");
+			// echo("Passe Super Admin : ".$this->dbpass."<br />");
+			$this->setSadminLogg(true);
 		}
 	}
 
@@ -67,6 +68,7 @@ class filemakerservice {
 		if($file === null) $file = $this->APIfm_paramfile;
 		if(file_exists($file)) {
 			$xmldata = simplexml_load_file($file);
+			// echo("<pre>");var_dump($xmldata);echo("</pre>");
 			// BASE DE DONNÉES
 			$findServ = $xmldata->xpath("/FMSERVERS/FMBASE[@default='default']");
 			if(count($findServ) > 0) {
@@ -93,35 +95,47 @@ class filemakerservice {
 					}
 				}
 			} else $this->setSadminDefined(false);
-		} else $this->setSadminDefined(false);
+		} else {
+			echo('Fichier de paramétrage FileMaker API non trouvé !!');
+			$this->setSadminDefined(false);
+		}
 
 		return $this->isSadminDefined();
 	}
 
 	/**
-	 * logge l'utilisateur
-	 * @param $login
+	 * log l'utilisateur
+	 * @param object User / string $userOrLogin
+	 * @param string $pass
+	 * @return boolean
 	 */
-	public function define_user($login, $pass) {
-		$this->loguser = $login;
-		$this->logpass = $pass;
+	public function define_user($userOrLogin, $pass = null) {
+		if(is_object($userOrLogin)) {
+			$this->loguser = $userOrLogin->getFmlogin();
+			$this->logpass = $userOrLogin->getFmpass();
+		} else {
+			$this->loguser = $userOrLogin;
+			$this->logpass = $pass;
+		}
 		$this->setUserDefined(true);
 
+		// echo("Login user : ".$this->loguser."<br />");
+		// echo("Passe user : ".$this->logpass."<br />");
 		return $this->isUserDefined();
 	}
 
 
 	/**
-	 * logge l'utilisateur
+	 * log l'utilisateur
 	 * @param $login
 	 * @param $pass
 	 */
-	public function log_user($login = null, $pass = null) {
-		if(($login !== null) && ($pass !== null)) $this->define_user($login, $pass);
+	public function log_user($userOrLogin = null, $pass = null) {
+		if((($userOrLogin !== null) && ($pass !== null)) || is_object($userOrLogin)) $this->define_user($userOrLogin, $pass);
 		if($this->isUserDefined()) {
 			$this->APIfm = new FileMaker($this->dbname);
-			$this->APIfm->setProperty('username',$this->loguser);
-			$this->APIfm->setProperty('password',$this->logpass);
+			$this->APIfm->setProperty('username', $this->loguser);
+			$this->APIfm->setProperty('password', $this->logpass);
 			$this->setUserLogg(true);
 		} else $this->setUserLogg(false);
 
