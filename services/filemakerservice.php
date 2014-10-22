@@ -34,14 +34,14 @@ class filemakerservice {
 	public function __construct(ContainerInterface $container) {
 		$this->container = $container;
 		$this->APIfm_paramfile = __DIR__."/../../../../../app/config/parameters_fm.xml";
-		require_once("FileMaker.php");
+		require_once(__DIR__."/../FM/FileMaker.php");
 		if($this->param_findSadmin() === true) {
-			echo('fmBDname : '.$this->dbname.'<br />');
-			$this->APIfmSADMIN = new FileMaker($this->dbname);
+			// echo('fmBDname : '.$this->dbname.'<br />');
+			$this->APIfmSADMIN = new \FileMaker($this->dbname);
 			$this->APIfmSADMIN->setProperty('username', $this->dbuser);
 			$this->APIfmSADMIN->setProperty('password', $this->dbpass);
-			echo("Login Super Admin : ".$this->dbuser."<br />");
-			echo("Passe Super Admin : ".$this->dbpass."<br />");
+			// echo("Login Super Admin : ".$this->dbuser."<br />");
+			// echo("Passe Super Admin : ".$this->dbpass."<br />");
 			$this->setSadminLogg(true);
 		}
 	}
@@ -95,7 +95,7 @@ class filemakerservice {
 				}
 			} else $this->setSadminDefined(false);
 		} else {
-			echo('Fichier de paramétrage FileMaker API non trouvé !!');
+			die('Fichier de paramétrage FileMaker API non trouvé !!');
 			$this->setSadminDefined(false);
 		}
 
@@ -118,8 +118,8 @@ class filemakerservice {
 		}
 		$this->setUserDefined(true);
 
-		echo("Login user : ".$this->loguser."<br />");
-		echo("Passe user : ".$this->logpass."<br />");
+		// echo("Login user : ".$this->loguser."<br />");
+		// echo("Passe user : ".$this->logpass."<br />");
 		return $this->isUserDefined();
 	}
 
@@ -132,7 +132,7 @@ class filemakerservice {
 	public function log_user($userOrLogin = null, $pass = null) {
 		if((($userOrLogin !== null) && ($pass !== null)) || is_object($userOrLogin)) $this->define_user($userOrLogin, $pass);
 		if($this->isUserDefined()) {
-			$this->APIfm = new FileMaker($this->dbname);
+			$this->APIfm = new \FileMaker($this->dbname);
 			$this->APIfm->setProperty('username', $this->loguser);
 			$this->APIfm->setProperty('password', $this->logpass);
 			$this->setUserLogg(true);
@@ -260,12 +260,78 @@ class filemakerservice {
 			$this->FMfind->addSortRule('cle', 1, FILEMAKER_SORT_DESCEND);
 			$result = $this->FMfind->execute();
 			if ($this->APIfm->isError($result)) {
-			    $records = array("Error" => $result->getMessage());
+			    $records = "Accès non autorisé.";
 			} else {
 				$records = $result->getRecords();
 			}
 			return $records;
-		} else return false;
+		} else {
+			return $records = "Utilisateur non connecté.";
+		}
+	}
+
+	/**
+	 * Renvoie la liste des locaux d'un ou plusieurs lieux
+	 * @param array $lieux
+	 * @return array
+	 */
+	public function getLocauxByLieux($lieux = null) {
+		if($this->isUserLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			$this->FMfind =& $this->APIfm->newFindAllCommand('Locaux_IPAD');
+			$this->FMfind->addSortRule('ref_local', 1, FILEMAKER_SORT_DESCEND);
+			$result = $this->FMfind->execute();
+			if ($this->APIfm->isError($result)) {
+			    $records = "Accès non autorisé.";
+			} else {
+				$records = $result->getRecords();
+			}
+			return $records;
+		} else {
+			return $records = "Utilisateur non connecté.";
+		}
+	}
+
+	/**
+	 * Renvoie la liste des bases de données
+	 * @return array
+	 */
+	public function getDatabases() {
+		if($this->isUserLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			$this->APIfm->setProperty('hostspec', 'http://localhost');
+			$this->FMfind = $this->APIfm->listDatabases();
+			// $result = $this->FMfind->execute();
+			if ($this->APIfm->isError($this->FMfind)) {
+			    $records = $this->APIfm->getCode()." : accès non autorisé.";
+			} else {
+				$records = $this->FMfind;
+			}
+			return $records;
+		} else {
+			return $records = "Utilisateur non connecté.";
+		}
+	}
+
+	/**
+	 * Renvoie la liste des modèles
+	 * @return array
+	 */
+	public function getLayouts() {
+		if($this->isUserLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			$this->APIfm->setProperty('hostspec', 'http://localhost');
+			$this->FMfind = $this->APIfm->listLayouts();
+			// $result = $this->FMfind->execute();
+			if ($this->APIfm->isError($this->FMfind)) {
+			    $records = $this->APIfm->getCode()." : accès non autorisé.";
+			} else {
+				$records = $this->FMfind;
+			}
+			return $records;
+		} else {
+			return $records = "Utilisateur non connecté.";
+		}
 	}
 
 
