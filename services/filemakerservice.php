@@ -266,7 +266,8 @@ class filemakerservice {
 			}
 			return $records;
 		} else {
-			return $records = "Utilisateur non connecté.";
+			$records = "Utilisateur non connecté.";
+			return $records;
 		}
 	}
 
@@ -288,7 +289,8 @@ class filemakerservice {
 			}
 			return $records;
 		} else {
-			return $records = "Utilisateur non connecté.";
+			$records = "Utilisateur non connecté.";
+			return $records;
 		}
 	}
 
@@ -309,7 +311,8 @@ class filemakerservice {
 			}
 			return $records;
 		} else {
-			return $records = "Utilisateur non connecté.";
+			$records = "Utilisateur non connecté.";
+			return $records;
 		}
 	}
 
@@ -330,7 +333,8 @@ class filemakerservice {
 			}
 			return $records;
 		} else {
-			return $records = "Utilisateur non connecté.";
+			$records = "Utilisateur non connecté.";
+			return $records;
 		}
 	}
 
