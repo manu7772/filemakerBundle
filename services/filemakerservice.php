@@ -4,7 +4,6 @@
 namespace filemakerBundle\services;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use filemakerBundle\services\FileMaker;
 
 class filemakerservice {
 
@@ -35,14 +34,14 @@ class filemakerservice {
 	public function __construct(ContainerInterface $container) {
 		$this->container = $container;
 		$this->APIfm_paramfile = __DIR__."/../../../../../app/config/parameters_fm.xml";
-		// require_once("FileMaker.php");
+		require_once("FileMaker.php");
 		if($this->param_findSadmin() === true) {
-			// echo('Test<br />');
+			echo('fmBDname : '.$this->dbname.'<br />');
 			$this->APIfmSADMIN = new FileMaker($this->dbname);
 			$this->APIfmSADMIN->setProperty('username', $this->dbuser);
 			$this->APIfmSADMIN->setProperty('password', $this->dbpass);
-			// echo("Login Super Admin : ".$this->dbuser."<br />");
-			// echo("Passe Super Admin : ".$this->dbpass."<br />");
+			echo("Login Super Admin : ".$this->dbuser."<br />");
+			echo("Passe Super Admin : ".$this->dbpass."<br />");
 			$this->setSadminLogg(true);
 		}
 	}
@@ -119,8 +118,8 @@ class filemakerservice {
 		}
 		$this->setUserDefined(true);
 
-		// echo("Login user : ".$this->loguser."<br />");
-		// echo("Passe user : ".$this->logpass."<br />");
+		echo("Login user : ".$this->loguser."<br />");
+		echo("Passe user : ".$this->logpass."<br />");
 		return $this->isUserDefined();
 	}
 

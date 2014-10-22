@@ -13,8 +13,6 @@
  * by implication, by FileMaker.
  */
 
-namespace filemakerBundle\services;
-
 /**#@+
  * @ignore Always load the error class and the implementation delegate.
  */
