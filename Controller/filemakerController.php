@@ -9,9 +9,9 @@ class filemakerController extends Controller {
 	/**
 	 * page d'accueil
 	 */
-	public function indexAction($name) {
+	public function indexAction() {
 		$data = array();
-		$data['name'] = $name;
+		$data['name'] = "anon.";
 		return $this->render('filemakerBundle:pages:homepage.html.twig', $data);
 	}
 

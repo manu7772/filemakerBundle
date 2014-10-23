@@ -220,12 +220,14 @@ return $Vc6140495;
  function listDatabases()
  {
  $V0f635d0e = $this->_execute(array('-dbnames' => true));
-if (FileMaker::isError($V0f635d0e)) {
+// if (FileMaker::isError($V0f635d0e)) {
+if (is_a($V0f635d0e, 'FileMaker_Error')) {
  return $V0f635d0e;
 }
 $V3643b863 = new FileMaker_Parser_fmresultset($this);
 $Vb4a88417 = $V3643b863->parse($V0f635d0e);
-if (FileMaker::isError($Vb4a88417)) {
+// if (FileMaker::isError($Vb4a88417)) {
+if (is_a($Vb4a88417, 'FileMaker_Error')) {
  return $Vb4a88417;
 }
 $Ve61ce306 = array();
@@ -238,12 +240,14 @@ return $Ve61ce306;
  {
  $V0f635d0e = $this->_execute(array('-db' => $this->getProperty('database'),
  '-scriptnames' => true));
-if (FileMaker::isError($V0f635d0e)) {
+// if (FileMaker::isError($V0f635d0e)) {
+if (is_a($V0f635d0e, 'FileMaker_Error')) {
  return $V0f635d0e;
 }
 $V3643b863 = new FileMaker_Parser_FMResultSet($this);
 $Vb4a88417 = $V3643b863->parse($V0f635d0e);
-if (FileMaker::isError($Vb4a88417)) {
+// if (FileMaker::isError($Vb4a88417)) {
+if (is_a($Vb4a88417, 'FileMaker_Error')) {
  return $Vb4a88417;
 }
 $Vd6c5855a = array();
@@ -256,12 +260,14 @@ return $Vd6c5855a;
  {
  $V0f635d0e = $this->_execute(array('-db' => $this->getProperty('database'),
  '-layoutnames' => true));
-if (FileMaker::isError($V0f635d0e)) {
+// if (FileMaker::isError($V0f635d0e)) {
+if (is_a($V0f635d0e, 'FileMaker_Error')) {
  return $V0f635d0e;
 }
 $V3643b863 = new FileMaker_Parser_FMResultSet($this);
 $Vb4a88417 = $V3643b863->parse($V0f635d0e);
-if (FileMaker::isError($Vb4a88417)) {
+// if (FileMaker::isError($Vb4a88417)) {
+if (is_a($Vb4a88417, 'FileMaker_Error')) {
  return $Vb4a88417;
 }
 $V34d59fda = array();
