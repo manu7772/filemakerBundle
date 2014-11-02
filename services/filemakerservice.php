@@ -71,7 +71,7 @@ class filemakerservice {
 		$checkUser = array(
 			"username" => "username",
 			"dbuser" => "login",
-			"dbpass" => "pass",
+			"dbpass" => "passe",
 			);
 		if($file === null) $file = $this->APIfm_paramfile;
 		if(file_exists($file)) {
