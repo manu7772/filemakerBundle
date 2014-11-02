@@ -43,7 +43,7 @@ class filemakerservice {
 			// echo("Login Super Admin : ".$this->dbuser."<br />");
 			// echo("Passe Super Admin : ".$this->dbpass."<br />");
 			$this->setSadminLogg(true);
-		}
+		} else die("Connexion FM impossible.");
 	}
 
 	/**
