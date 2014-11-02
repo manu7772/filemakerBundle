@@ -62,7 +62,7 @@ class filemakerservice {
 	 * @param $username / permet de changer le username recherché ('sadmin' par défaut)
 	 * @return boolean (true si succès)
 	 */
-	protected function param_findSadmin($file = null, $username = 'sadmin') {
+	protected function param_findSadmin($file = null, $superadmin = 'default') {
 		$this->setSadminDefined(true);
 		$checkServer = array(
 			"dbname" => "nom",
@@ -89,7 +89,7 @@ class filemakerservice {
 						foreach($checkServer as $nomvar2 => $champ2) {
 							$this->$nomvar2 = null;
 						}
-						$this->addError('Données d\'administrateur absentes.');
+						$this->addError('Données de serveur (accès) absentes.');
 						$this->setSadminDefined(false);
 						break(2);
 					}
@@ -99,7 +99,7 @@ class filemakerservice {
 				$this->setSadminDefined(false);
 			}
 			// user Super Admin
-			$findUser = $xmldata->xpath("/FMSERVERS/FMBASE[@default='default']/user[@username='".$username."']");
+			$findUser = $xmldata->xpath("/FMSERVERS/FMBASE[@default='default']/user[@superadmin='".$superadmin."']");
 			if(count($findUser) > 0) {
 				reset($findUser);
 				$attr = current($findUser)->attributes();
@@ -107,13 +107,13 @@ class filemakerservice {
 					if(isset($attr[$champ])) {
 						$this->$nomvar = $attr[$champ];
 					} else {
-						$this->addError('Aucun administrateur trouvé.');
+						$this->addError('Données administrateur insuffisantes.');
 						$this->$nomvar = null;
 						$this->setSadminDefined(false);
 					}
 				}
 			} else {
-				$this->addError('Aucun utilisateur trouvé.');
+				$this->addError('Aucun administrateur trouvé.');
 				$this->setSadminDefined(false);
 			}
 		} else {
