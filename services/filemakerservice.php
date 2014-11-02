@@ -12,7 +12,7 @@ class filemakerservice {
 	protected $APIfm;				// objet FileMaker (accès user logged)
 	protected $APIfmSADMIN;			// objet FileMaker (accès Super Admin)
 	protected $FMfind;				//
-		
+
 	protected $APIfm_paramfile;		// fichier de paramètres de l'API FileMaker
 
 	protected $dbname;				// nom de la base
@@ -27,6 +27,8 @@ class filemakerservice {
 	protected $user_defined 	= false;	// Super Admin trouvé ou non (boolean)
 	protected $SA_logged 		= false;	// Super Admin connecté ou non (boolean)
 	protected $user_logged 		= false;	// user connecté ou non (boolean)
+
+	protected $errors			= array();	// messages d'erreur
 
 	// ATTENTION :
 	// AJOUTER le namespace dans l'API FileMaker : namespace filemakerBundle\services;
@@ -43,7 +45,14 @@ class filemakerservice {
 			// echo("Login Super Admin : ".$this->dbuser."<br />");
 			// echo("Passe Super Admin : ".$this->dbpass."<br />");
 			$this->setSadminLogg(true);
-		} else die("Connexion FM impossible.");
+		} else {
+			$this->addError('Connexion FM impossible.');
+			$this->setSadminLogg(false);
+		}
+	}
+
+	public function __destruct() {
+		// $this->affErrors();
 	}
 
 	/**
@@ -71,31 +80,44 @@ class filemakerservice {
 			// BASE DE DONNÉES
 			$findServ = $xmldata->xpath("/FMSERVERS/FMBASE[@default='default']");
 			if(count($findServ) > 0) {
-				$attr = $findServ[0]->attributes();
+				reset($findServ);
+				$attr = current($findServ)->attributes();
 				foreach($checkServer as $nomvar => $champ) {
 					if(isset($attr[$champ])) {
 						$this->$nomvar = $attr[$champ];
 					} else {
-						$this->$nomvar = null;
+						foreach($checkServer as $nomvar2 => $champ2) {
+							$this->$nomvar2 = null;
+						}
+						$this->addError('Données d\'administrateur absentes.');
 						$this->setSadminDefined(false);
+						break(2);
 					}
 				}
-			} else $this->setSadminDefined(false);
+			} else {
+				$this->addError('Données de serveur absentes.');
+				$this->setSadminDefined(false);
+			}
 			// user Super Admin
 			$findUser = $xmldata->xpath("/FMSERVERS/FMBASE[@default='default']/user[@username='".$username."']");
 			if(count($findUser) > 0) {
-				$attr = $findUser[0]->attributes();
+				reset($findUser);
+				$attr = current($findUser)->attributes();
 				foreach($checkUser as $nomvar => $champ) {
 					if(isset($attr[$champ])) {
 						$this->$nomvar = $attr[$champ];
 					} else {
+						$this->addError('Aucun administrateur trouvé.');
 						$this->$nomvar = null;
 						$this->setSadminDefined(false);
 					}
 				}
-			} else $this->setSadminDefined(false);
+			} else {
+				$this->addError('Aucun utilisateur trouvé.');
+				$this->setSadminDefined(false);
+			}
 		} else {
-			die('Fichier de paramétrage FileMaker API non trouvé !!');
+			$this->addError('Fichier de paramétrage XML pour FileMaker API non trouvé.');
 			$this->setSadminDefined(false);
 		}
 
@@ -142,6 +164,58 @@ class filemakerservice {
 	}
 
 
+	// ***********************
+	// ERRORS
+	// ***********************
+
+	/**
+	 * Ajoute une erreur / insère la date/heure automatiquement
+	 * @param array/string
+	 */
+	protected function addError($message) {
+		$this->addErrors($message);
+	}
+
+
+	/**
+	 * Ajoute une erreur / insère la date/heure automatiquement
+	 * @param array/string
+	 * @param boolean $putFlash / insère également en données flashbag si true (par défaut)
+	 * @return filemakerservice
+	 */
+	protected function addErrors($messages, $putFlash = true) {
+		$time = new \Datetime();
+		if(is_string($messages)) $messages = array($messages);
+		foreach ($messages as $message) {
+			$this->errors[] = array($message, $time);
+			$this->container->get("session")->getFlashBag()->add("FMerror", $message." (".$time->format("H:i:s - Y/m/d").")");
+		}
+		return $this;
+	}
+
+	/**
+	 * Renvoie la liste des erreurs
+	 * @return array errors
+	 */
+	protected function getErrors() {
+		return $this->errors;
+	}
+
+	/**
+	 * Affiche les erreurs (Boostrap required)
+	 * @return filemakerservice
+	 */
+	protected function affErrors() {
+		echo("<br /><br /><div class='container'><table class='table table-bordered table-hover table-condensed'>");
+		foreach ($this->errors as $key => $error) {
+			echo("	<tr>");
+			echo("		<td>".$error[0]."</td>");
+			echo("		<td>".$error[1]->format("H:i:s - Y/m/d")."</td>");
+			echo("	</tr>");
+		}
+		echo("</table></div><br />");
+		return $this;
+	}
 
 	// ***********************
 	// SETTERS
