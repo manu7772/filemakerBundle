@@ -379,7 +379,7 @@ class filemakerservice {
 			$this->FMfind = $this->APIfm->listDatabases();
 			// $result = $this->FMfind->execute();
 			if ($this->APIfm->isError($this->FMfind)) {
-			    $records = $this->APIfm->getCode()." : accès non autorisé.";
+			    $records = "Accès non autorisé.";
 			} else {
 				$records = $this->FMfind;
 			}
@@ -401,7 +401,7 @@ class filemakerservice {
 			$this->FMfind = $this->APIfm->listLayouts();
 			// $result = $this->FMfind->execute();
 			if ($this->APIfm->isError($this->FMfind)) {
-			    $records = $this->APIfm->getCode()." : accès non autorisé.";
+			    $records = "Accès non autorisé.";
 			} else {
 				$records = $this->FMfind;
 			}
@@ -412,5 +412,12 @@ class filemakerservice {
 		}
 	}
 
+	/**
+	 * Renvoie la version de l'API
+	 * @return string (?)
+	 */
+	public function getAPIVersion() {
+		return $this->APIfm->getAPIVersion();
+	}
 
 }

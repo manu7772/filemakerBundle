@@ -15,7 +15,7 @@ $__FM_CONFIG['charset'] = 'UTF-8';
  * The default locale for providing string translations of error
  * codes. Options are: 'en'
  */
-$__FM_CONFIG['locale'] = 'en';
+$__FM_CONFIG['locale'] = 'fr';
 
 /**
  * The log level, if a logging object is provided.
