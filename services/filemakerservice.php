@@ -341,7 +341,7 @@ class filemakerservice {
 			// Create FileMaker_Command_Find on layout to search
 			$this->FMfind =& $this->APIfm->newFindAllCommand('Lieu_IPAD');
 			$this->FMfind->addSortRule('cle', 1, FILEMAKER_SORT_DESCEND);
-			return getRecords($this->FMfind->execute());
+			return $this->getRecords($this->FMfind->execute());
 		} else {
 			$records = "Utilisateur non connecté.";
 			return $records;
@@ -358,7 +358,7 @@ class filemakerservice {
 			// Create FileMaker_Command_Find on layout to search
 			$this->FMfind =& $this->APIfm->newFindAllCommand('Locaux_IPAD');
 			$this->FMfind->addSortRule('ref_local', 1, FILEMAKER_SORT_DESCEND);
-			return getRecords($this->FMfind->execute());
+			return $this->getRecords($this->FMfind->execute());
 		} else {
 			$records = "Utilisateur non connecté.";
 			return $records;
@@ -374,7 +374,7 @@ class filemakerservice {
 			// Create FileMaker_Command_Find on layout to search
 			$this->FMfind =& $this->APIfm->newFindAllCommand('Projet_liste');
 			$this->FMfind->addSortRule('date_projet', 1, FILEMAKER_SORT_DESCEND);
-			return getRecords($this->FMfind->execute());
+			return $this->getRecords($this->FMfind->execute());
 		} else {
 			$records = "Utilisateur non connecté.";
 			return $records;
@@ -390,7 +390,7 @@ class filemakerservice {
 			// Create FileMaker_Command_Find on layout to search
 			$this->FMfind =& $this->APIfm->newFindAllCommand('Tiers_Liste');
 			$this->FMfind->addSortRule('ref', 1, FILEMAKER_SORT_DESCEND);
-			return getRecords($this->FMfind->execute());
+			return $this->getRecords($this->FMfind->execute());
 		} else {
 			$records = "Utilisateur non connecté.";
 			return $records;
