@@ -55,6 +55,15 @@ class filemakerservice {
 		// $this->affErrors();
 	}
 
+	protected function getRecords($result) {
+		if ($this->APIfm->isError($result)) {
+		    $records = "Accès non autorisé.";
+		} else {
+			$records = $result->getRecords();
+		}
+		return $records;
+	}
+
 	/**
 	 * Trouve les login et passe du sadmin
 	 * dans le fichier app/config/parameters_fm.xml
@@ -332,13 +341,7 @@ class filemakerservice {
 			// Create FileMaker_Command_Find on layout to search
 			$this->FMfind =& $this->APIfm->newFindAllCommand('Lieu_IPAD');
 			$this->FMfind->addSortRule('cle', 1, FILEMAKER_SORT_DESCEND);
-			$result = $this->FMfind->execute();
-			if ($this->APIfm->isError($result)) {
-			    $records = "Accès non autorisé.";
-			} else {
-				$records = $result->getRecords();
-			}
-			return $records;
+			return getRecords($this->FMfind->execute());
 		} else {
 			$records = "Utilisateur non connecté.";
 			return $records;
@@ -355,18 +358,46 @@ class filemakerservice {
 			// Create FileMaker_Command_Find on layout to search
 			$this->FMfind =& $this->APIfm->newFindAllCommand('Locaux_IPAD');
 			$this->FMfind->addSortRule('ref_local', 1, FILEMAKER_SORT_DESCEND);
-			$result = $this->FMfind->execute();
-			if ($this->APIfm->isError($result)) {
-			    $records = "Accès non autorisé.";
-			} else {
-				$records = $result->getRecords();
-			}
-			return $records;
+			return getRecords($this->FMfind->execute());
 		} else {
 			$records = "Utilisateur non connecté.";
 			return $records;
 		}
 	}
+
+	/**
+	 * Renvoie la liste des affaires
+	 * @return array
+	 */
+	public function getAffaires() {
+		if($this->isUserLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			$this->FMfind =& $this->APIfm->newFindAllCommand('Projet_liste');
+			$this->FMfind->addSortRule('date_projet', 1, FILEMAKER_SORT_DESCEND);
+			return getRecords($this->FMfind->execute());
+		} else {
+			$records = "Utilisateur non connecté.";
+			return $records;
+		}
+	}
+
+	/**
+	 * Renvoie la liste des tiers
+	 * @return array
+	 */
+	public function getTiers() {
+		if($this->isUserLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			$this->FMfind =& $this->APIfm->newFindAllCommand('Tiers_Liste');
+			$this->FMfind->addSortRule('ref', 1, FILEMAKER_SORT_DESCEND);
+			return getRecords($this->FMfind->execute());
+		} else {
+			$records = "Utilisateur non connecté.";
+			return $records;
+		}
+	}
+
+	// Informations de structure de base de données
 
 	/**
 	 * Renvoie la liste des bases de données
