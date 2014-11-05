@@ -391,6 +391,28 @@ class filemakerservice {
 	}
 
 	/**
+	 * Renvoie la liste des bases de données
+	 * @return array
+	 */
+	public function getScripts() {
+		if($this->isUserLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			// $this->APIfm->setProperty('hostspec', 'http://localhost');
+			$this->FMfind = $this->APIfm->listScripts();
+			// $result = $this->FMfind->execute();
+			if ($this->APIfm->isError($this->FMfind)) {
+			    $records = "Accès non autorisé.";
+			} else {
+				$records = $this->FMfind;
+			}
+			return $records;
+		} else {
+			$records = "Utilisateur non connecté.";
+			return $records;
+		}
+	}
+
+	/**
 	 * Renvoie la liste des modèles
 	 * @return array
 	 */
