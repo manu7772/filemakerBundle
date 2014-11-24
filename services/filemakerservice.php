@@ -339,8 +339,24 @@ class filemakerservice {
 	public function getLieux() {
 		if($this->isUserLogged() === true) {
 			// Create FileMaker_Command_Find on layout to search
-			$this->FMfind =& $this->APIfm->newFindAllCommand('Lieu_IPAD');
+			$this->FMfind =& $this->APIfm->newFindAllCommand('Lieu_Liste');
 			$this->FMfind->addSortRule('cle', 1, FILEMAKER_SORT_DESCEND);
+			return $this->getRecords($this->FMfind->execute());
+		} else {
+			$records = "Utilisateur non connecté.";
+			return $records;
+		}
+	}
+
+	/**
+	 * Renvoie la liste des lieux
+	 * @return array
+	 */
+	public function getRapports() {
+		if($this->isUserLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			$this->FMfind =& $this->APIfm->newFindAllCommand('Rapports_Local');
+			$this->FMfind->addSortRule('Fk_Id_Local', 1, FILEMAKER_SORT_DESCEND);
 			return $this->getRecords($this->FMfind->execute());
 		} else {
 			$records = "Utilisateur non connecté.";
