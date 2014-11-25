@@ -8,27 +8,33 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class filemakerservice {
 
 	protected $data = array();
-	protected $container;			// ContainerInterface
-	protected $APIfm;				// objet FileMaker (accès user logged)
-	protected $APIfmSADMIN;			// objet FileMaker (accès Super Admin)
-	protected $FMfind;				//
+	protected $container;				// ContainerInterface
+	protected $APIfm;					// objet FileMaker (accès user logged)
+	protected $APIfmSA;					// objet FileMaker (accès Super Admin)
+	protected $FMfind;					// Résultat de recherche FM
 
-	protected $APIfm_paramfile;		// fichier de paramètres de l'API FileMaker
+	protected $APIfm_paramfile;			// fichier de paramètres de l'API FileMaker
 
-	protected $dbname;				// nom de la base
-	protected $dbuser;				// login du Super Admin
-	protected $dbpass;				// mot de passe du Super Admin
-	protected $dbdescribe;			// description de la bd
-	protected $username;			// username
-	protected $loguser;				// login user
-	protected $logpass;				// pass user
+	// SAdmin
+	protected $dbname = null;			// nom de la base
+	protected $dbuserSA;				// login du Super Admin
+	protected $dbpassSA;				// mot de passe du Super Admin
+	protected $dbdescribe;				// description de la bd
+	protected $SA_defined 	= false;	// Super Admin trouvé ou non (boolean)
+	protected $SA_logged 	= false;	// Super Admin connecté ou non (boolean)
+	// User
+	protected $username;				// username
+	protected $loguser;					// login user
+	protected $logpass;					// pass user
+	protected $user_defined = false;	// user trouvé ou non (boolean)
+	protected $user_logged 	= false;	// user connecté ou non (boolean)
 
-	protected $SA_defined 		= false;	// Super Admin trouvé ou non (boolean)
-	protected $user_defined 	= false;	// Super Admin trouvé ou non (boolean)
-	protected $SA_logged 		= false;	// Super Admin connecté ou non (boolean)
-	protected $user_logged 		= false;	// user connecté ou non (boolean)
+	// Données globales
+	protected $listOfDatabases;			// liste des bases de données
+	protected $listScripts = array(); 	// liste des scripts par BDD
+	protected $listOfModels = array(); 	// liste des modèles par BDD
 
-	protected $errors			= array();	// messages d'erreur
+	protected $errors = array();		// messages d'erreur
 
 	// ATTENTION :
 	// AJOUTER le namespace dans l'API FileMaker : namespace filemakerBundle\services;
@@ -37,18 +43,23 @@ class filemakerservice {
 		$this->container = $container;
 		$this->APIfm_paramfile = __DIR__."/../../../../../app/config/parameters_fm.xml";
 		require_once(__DIR__."/../FM/FileMaker.php");
+		// paramètres logg + logge SAdmin
 		if($this->param_findSadmin() === true) {
-			// echo('fmBDname : '.$this->dbname.'<br />');
-			$this->APIfmSADMIN = new \FileMaker($this->dbname);
-			$this->APIfmSADMIN->setProperty('username', $this->dbuser);
-			$this->APIfmSADMIN->setProperty('password', $this->dbpass);
-			// echo("Login Super Admin : ".$this->dbuser."<br />");
-			// echo("Passe Super Admin : ".$this->dbpass."<br />");
-			$this->setSadminLogg(true);
+			// Liste des BDD
+			$this->listOfDatabases = $this->getDatabasesSAdmin();
+			// Liste des scripts par BDD
+			foreach ($this->listOfDatabases as $key => $BDD) {
+				$this->listScripts[$BDD] = $this->getScritpsByBddSAdmin($BDD);
+			}
+			// Liste des modèles par BDD
+			foreach ($this->listOfDatabases as $key => $BDD) {
+				$this->listOfModels[$BDD] = $this->getLayoutsByBddSAdmin($BDD);
+			}
 		} else {
 			$this->addError('Connexion FM impossible.');
-			$this->setSadminLogg(false);
 		}
+		// liste des BDD
+		return $this;
 	}
 
 	public function __destruct() {
@@ -67,20 +78,21 @@ class filemakerservice {
 	/**
 	 * Trouve les login et passe du sadmin
 	 * dans le fichier app/config/parameters_fm.xml
+	 * + logge SAdmin
 	 * @param $file / chemin et nom du fichier xml
-	 * @param $username / permet de changer le username recherché ('sadmin' par défaut)
+	 * @param $superadmin / permet de changer le username recherché ('sadmin' par défaut)
 	 * @return boolean (true si succès)
 	 */
 	protected function param_findSadmin($file = null, $superadmin = 'default') {
 		$this->setSadminDefined(true);
 		$checkServer = array(
-			"dbname" => "nom",
-			"dbdescribe" => "descriptif",
+			"dbname" 		=> "nom",
+			"dbdescribe" 	=> "descriptif",
 			);
-		$checkUser = array(
-			"username" => "username",
-			"dbuser" => "login",
-			"dbpass" => "passe",
+		$checkSA = array(
+			"username" 		=> "username",
+			"dbuserSA" 		=> "login",
+			"dbpassSA" 		=> "passe",
 			);
 		if($file === null) $file = $this->APIfm_paramfile;
 		if(file_exists($file)) {
@@ -112,13 +124,14 @@ class filemakerservice {
 			if(count($findUser) > 0) {
 				reset($findUser);
 				$attr = current($findUser)->attributes();
-				foreach($checkUser as $nomvar => $champ) {
+				foreach($checkSA as $nomvar => $champ) {
 					if(isset($attr[$champ])) {
 						$this->$nomvar = $attr[$champ];
 					} else {
-						$this->addError('Données administrateur insuffisantes.');
+						$this->addError('Données administrateur insuffisantes : '.$champ.'.');
 						$this->$nomvar = null;
 						$this->setSadminDefined(false);
+						break(2);
 					}
 				}
 			} else {
@@ -129,28 +142,29 @@ class filemakerservice {
 			$this->addError('Fichier de paramétrage XML pour FileMaker API non trouvé.');
 			$this->setSadminDefined(false);
 		}
-
-		return $this->isSadminDefined();
+		// logge SAdmin
+		return $this->log_sadmin();
 	}
 
 	/**
-	 * log l'utilisateur
+	 * définit l'utilisateur
 	 * @param object User / string $userOrLogin
 	 * @param string $pass
 	 * @return boolean
 	 */
 	public function define_user($userOrLogin, $pass = null) {
+		// echo("Classe : ".get_class($userOrLogin)."<br />");
 		if(is_object($userOrLogin)) {
 			$this->loguser = $userOrLogin->getFmlogin();
 			$this->logpass = $userOrLogin->getFmpass();
-		} else {
+			$this->setUserDefined(true);
+		} else if($pass !== null) {
 			$this->loguser = $userOrLogin;
 			$this->logpass = $pass;
+			$this->setUserDefined(true);
+		} else {
+			$this->setUserDefined(false);
 		}
-		$this->setUserDefined(true);
-
-		// echo("Login user : ".$this->loguser."<br />");
-		// echo("Passe user : ".$this->logpass."<br />");
 		return $this->isUserDefined();
 	}
 
@@ -159,9 +173,12 @@ class filemakerservice {
 	 * log l'utilisateur
 	 * @param $login
 	 * @param $pass
+	 * @return boolean
 	 */
 	public function log_user($userOrLogin = null, $pass = null) {
-		if((($userOrLogin !== null) && ($pass !== null)) || is_object($userOrLogin)) $this->define_user($userOrLogin, $pass);
+		if((($userOrLogin !== null) && ($pass !== null)) || (is_object($userOrLogin))) {
+			$this->define_user($userOrLogin, $pass);
+		}
 		if($this->isUserDefined()) {
 			$this->APIfm = new \FileMaker($this->dbname);
 			$this->APIfm->setProperty('username', $this->loguser);
@@ -170,6 +187,22 @@ class filemakerservice {
 		} else $this->setUserLogg(false);
 
 		return $this->isUserLogged();
+	}
+
+	/**
+	 * log sadmin
+	 * @return boolean
+	 */
+	public function log_sadmin($BDD = null) {
+		if($BDD === null) $BDD = $this->dbname;
+		if($this->isSadminDefined() && $this->dbname !== null) {
+			$this->APIfmSA = new \FileMaker($BDD);
+			$this->APIfmSA->setProperty('username', $this->dbuserSA);
+			$this->APIfmSA->setProperty('password', $this->dbpassSA);
+			$this->setSadminLogged(true);
+		} else $this->setSadminLogged(false);
+
+		return $this->isSadminLogged();
 	}
 
 
@@ -226,6 +259,17 @@ class filemakerservice {
 		return $this;
 	}
 
+	/**
+	 *
+	 */
+	protected function affAll() {
+		echo("<pre>");
+		var_dump($this->listOfDatabases);
+		var_dump($this->listScripts);
+		var_dump($this->listOfModels);
+		echo("</pre>");
+	}
+
 	// ***********************
 	// SETTERS
 	// ***********************
@@ -233,33 +277,46 @@ class filemakerservice {
 	/**
 	 * Change défini de Super Admin
 	 * @param boolean
+	 * @return filemakerservice
 	 */
 	protected function setSadminDefined($defined) {
-		$this->SA_defined = $defined;
+		if(is_bool($defined)) $this->SA_defined = $defined;
+			else $this->SA_defined = false;
+		return $this;
 	}
+
+	/**
+	 * Change état log SAdmin
+	 * @param boolean $log
+	 * @return filemakerservice
+	 */
+	public function setSadminLogged($log) {
+		if(is_bool($log)) $this->SA_logged = $log;
+			else $this->SA_logged = false;
+		return $this;
+	}
+
 
 	/**
 	 * Change defini de user
 	 * @param boolean
+	 * @return filemakerservice
 	 */
 	protected function setUserDefined($defined) {
-		$this->user_defined = $defined;
-	}
-
-	/**
-	 * Change connexion statut de Super Admin
-	 * @param boolean
-	 */
-	protected function setSadminLogg($statut) {
-		$this->SA_logged = $statut;
+		if(is_bool($defined)) $this->user_defined = $defined;
+			else $this->user_defined = false;
+		return $this;
 	}
 
 	/**
 	 * Change connexion statut de user
 	 * @param boolean
+	 * @return filemakerservice
 	 */
-	protected function setUserLogg($statut) {
-		$this->user_logged = $statut;
+	protected function setUserLogg($log) {
+		if(is_bool($log)) $this->user_logged = $log;
+			else $this->user_logged = false;
+		return $this;
 	}
 
 
@@ -331,6 +388,12 @@ class filemakerservice {
 	public function isUserLogged() {
 		return $this->user_logged;
 	}
+
+
+
+
+
+
 
 	/**
 	 * Renvoie la liste des lieux
@@ -430,15 +493,36 @@ class filemakerservice {
 			} else {
 				$records = $this->FMfind;
 			}
-			return $records;
 		} else {
 			$records = "Utilisateur non connecté.";
-			return $records;
 		}
+		return $records;
 	}
 
 	/**
-	 * Renvoie la liste des bases de données
+	 * Renvoie la liste des bases de données via SAdmin
+	 * @return array
+	 */
+	public function getDatabasesSAdmin() {
+		// echo("FMSA : ".get_class($this->APIfmSA)."<br />");
+		if($this->isSadminLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			$this->APIfmSA->setProperty('hostspec', 'http://localhost');
+			$this->FMfind = $this->APIfmSA->listDatabases();
+			// $result = $this->FMfind->execute();
+			if ($this->APIfmSA->isError($this->FMfind)) {
+				$records = "Accès non autorisé.";
+			} else {
+				$records = $this->FMfind;
+			}
+		} else {
+			$records = "Super Admin non connecté.";
+		}
+		return $records;
+	}
+
+	/**
+	 * Renvoie la liste des scripts
 	 * @return array
 	 */
 	public function getScripts() {
@@ -460,6 +544,28 @@ class filemakerservice {
 	}
 
 	/**
+	 * Renvoie la liste des scripts via SAdmin
+	 * @return array
+	 */
+	public function getScritpsByBddSAdmin($BDD) {
+		// Create FileMaker_Command_Find on layout to search
+		// $this->APIfm->setProperty('hostspec', 'http://localhost');
+		if($this->isSadminLogged() === true) {
+			$this->log_sadmin($BDD);
+			$this->FMfind = $this->APIfmSA->listScripts();
+			// $result = $this->APIfmSA->execute();
+			if ($this->APIfmSA->isError($this->FMfind)) {
+			    $records = "Accès non autorisé.";
+			} else {
+				$records = $this->FMfind;
+			}
+		} else {
+			$records = "Super Admin non connecté.";
+		}
+		return $records;
+	}
+
+	/**
 	 * Renvoie la liste des modèles
 	 * @return array
 	 */
@@ -477,8 +583,30 @@ class filemakerservice {
 			return $records;
 		} else {
 			$records = "Utilisateur non connecté.";
-			return $records;
 		}
+		return $records;
+	}
+
+	/**
+	 * Renvoie la liste des modèles
+	 * @return array
+	 */
+	public function getLayoutsByBddSAdmin($BDD) {
+		if($this->isSadminLogged() === true) {
+			// Create FileMaker_Command_Find on layout to search
+			$this->log_sadmin($BDD);
+			$this->APIfmSA->setProperty('hostspec', 'http://localhost');
+			$this->FMfind = $this->APIfmSA->listLayouts();
+			// $result = $this->FMfind->execute();
+			if ($this->APIfmSA->isError($this->FMfind)) {
+			    $records = "Accès non autorisé.";
+			} else {
+				$records = $this->FMfind;
+			}
+		} else {
+			$records = "Super Admin non connecté.";
+		}
+		return $records;
 	}
 
 	/**
