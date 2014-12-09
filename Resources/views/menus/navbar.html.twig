@@ -1,3 +1,9 @@
+{% set fmservice = app.session.get('filemakerservice') %}
+{% set fmdev = app.session.get('filemaker_DEV') %}
+{% set currentserver = "" %}
+{% set currentbase = "" %}
+{% set active = "" %}
+{% set arrow = "" %}
 {% block navbar %}
 <nav class="navbar navbar-inverse navbar-static-top" role="navigation">
 	<div class="container-fluid">
@@ -20,6 +26,62 @@
 			<ul class="nav navbar-nav">
 				{% block navbarmenu %}
 				<!-- MENU PRINCIPAL NAVBAR -->
+				{% block SADMIN %}
+				{# if is_granted("ROLE_SUPER_ADMIN") #}
+				<li class="dropdown">
+					<a href="{{ url('ensemble01filemaker_pageweb') }}" class="dropdown-toggle" data-toggle="dropdown">Data Sadmin <span class="caret"></span></a>
+					<ul class="dropdown-menu" role="menu">
+						<li role="presentation" class="dropdown-header">Serveurs</li>
+						{% for server, data in fmservice %}
+						{% if data.current == true %}
+							{% set active = " class='disabled'" %}
+							{% set arrow = "&gt; " %}
+							{% set currentserver = data.nom %}
+						{% else %}
+							{% set active = "" %}
+							{% set arrow = "" %}
+						{% endif %}
+						<li{{ active|raw }}>
+							<a href="{{ url('ensemble01filemaker_changeserver', {servernom: data.nom, page: page}) }}" title="{{ data.ip }}">{{ arrow|raw }}{{ data.nom }}</a>
+						</li>
+						{% endfor %}
+						<li class="divider"></li>
+						<li role="presentation" class="dropdown-header">Bases <small>({{ currentserver }})</small></li>
+						{% for base, data in fmservice[currentserver].databases.valids %}
+						{% if data.current == true %}
+							{% set active = " class='disabled'" %}
+							{% set arrow = "&gt; " %}
+							{% set currentbase = data.nom %}
+						{% else %}
+							{% set active = "" %}
+							{% set arrow = "" %}
+						{% endif %}
+						<li{{ active|raw }}>
+							<a href="{{ url('ensemble01filemaker_changebase', {basenom: data.nom, page: page}) }}"{% if data.descriptif is defined %} title = "{{ data.descriptif }}"{% endif %}>{{ arrow|raw }}{{ data.nom }}</a>
+						</li>
+						{% endfor %}
+						<li class="divider"></li>
+						<li role="presentation" class="dropdown-header">Base {{ currentbase }}</li>
+						<li><a href="{{ url('ensemble01filemaker_pageweb', {page: 'liste-layouts'}) }}">Modèles</a></li>
+						<li><a href="{{ url('ensemble01filemaker_pageweb', {page: 'liste-scripts'}) }}">Scripts</a></li>
+					</ul>
+				</li>
+				{% if fmdev|length > 0 %}
+				<li class="dropdown">
+					<a href="{{ url('ensemble01filemaker_pageweb') }}" class="dropdown-toggle" data-toggle="dropdown">DEV data <span class="caret"></span></a>
+					<ul class="dropdown-menu" role="menu">
+						{% for nom, dat in fmdev %}
+						{% if not loop.first %}
+						<li class="divider"></li>
+						{% endif %}
+						<li role="presentation" class="dropdown-header">{{ nom }}</li>
+						<li role="presentation" class="dropdown-header">{{ dat }}</li>
+						{% endfor %}
+					</ul>
+				</li>
+				{% endif %}
+				{# endif #}
+				{% endblock SADMIN %}
 				{% endblock navbarmenu %}
 			</ul>
 			{% endblock navbarcontenu %}
