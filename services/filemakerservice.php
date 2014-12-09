@@ -756,6 +756,19 @@ class filemakerservice {
 		return false;
 	}
 
+	/**
+	 * Renvoie un nouvel objet FileMaker
+	 * @return FileMaker
+	 */
+	protected function getNewFMobject() {
+		$FMbase = new \FileMaker();
+		$FMbase->setProperty('database', $this->getCurrentBASE());
+		$FMbase->setProperty('hostspec', $this->getCurrentIP());
+		$FMbase->setProperty('username', $this->getCurrentSAdminLogin());
+		$FMbase->setProperty('password', $this->getCurrentSAdminPasse());
+		return $FMbase;
+	}
+
 
 
 	// ***********************
@@ -1031,87 +1044,16 @@ class filemakerservice {
 		}
 	}
 
-	// Informations de structure de base de données
-
-
-	// /**
-	//  * Renvoie la liste des bases de données via SAdmin
-	//  * @return array
-	//  */
-	// public function getDatabasesSAdmin() {
-	// 	if($this->isSadminLogged() === true) {
-	// 		// Create FileMaker_Command_Find on layout to search
-	// 		$this->FMbase->setProperty('hostspec', 'http://localhost');
-	// 		$this->FMfind = $this->FMbase->listDatabases();
-	// 		// $result = $this->FMfind->execute();
-	// 		if ($this->FMbase->isError($this->FMfind)) {
-	// 			$records = "Accès non autorisé.";
-	// 		} else {
-	// 			$records = $this->FMfind;
-	// 		}
-	// 	} else {
-	// 		$records = "Super Admin non connecté.";
-	// 	}
-	// 	return $records;
-	// }
-
 	/**
 	 * Renvoie la liste des scripts
  	 * @param string $SERVnom - nom du serveur (ou serveur par défaut si null)
 	 * @param string $BASEnom - nom de la base (ou base par défaut si null)
-	 * @return array
+	 * @return array / string
 	 */
 	public function getScripts($SERVnom = null, $BASEnom = null) {
-		if($this->isUserLogged() === true) {
-			// Create FileMaker_Command_Find on layout to search
-			// $this->FMbase->setProperty('hostspec', 'http://localhost');
-			$this->FMfind = $this->FMbase->listScripts();
-			// $result = $this->FMfind->execute();
-			if ($this->FMbase->isError($this->FMfind)) {
-			    $records = "Accès non autorisé.";
-			} else {
-				$records = $this->FMfind;
-			}
-			return $records;
-		} else {
-			$records = "Utilisateur non connecté.";
-			return $records;
-		}
-	}
-
-	/**
-	 * Renvoie la liste des scripts via SAdmin
-	 * @return array
-	 */
-	public function getScritpsByBddSAdmin($BDD) {
 		// Create FileMaker_Command_Find on layout to search
-		// $this->FMbase->setProperty('hostspec', 'http://localhost');
-		if($this->isSadminLogged() === true) {
-			$this->log_sadmin($BDD);
-			$this->FMfind = $this->FMbase->listScripts();
-			// $result = $this->FMbase->execute();
-			if ($this->FMbase->isError($this->FMfind)) {
-			    $records = "Accès non autorisé.";
-			} else {
-				$records = $this->FMfind;
-			}
-		} else {
-			$records = "Super Admin non connecté.";
-		}
-		return $records;
-	}
-
-	/**
-	 * Renvoie la liste des modèles
-	 * @return array
-	 */
-	public function getLayouts($SERVnom = null, $BASEnom = null) {
-		$this->FMbase = new \FileMaker();
-		$this->FMbase->setProperty('database', $this->getCurrentBASE());
-		$this->FMbase->setProperty('hostspec', $this->getCurrentIP());
-		$this->FMbase->setProperty('username', $this->getCurrentSAdminLogin());
-		$this->FMbase->setProperty('password', $this->getCurrentSAdminPasse());
-		$this->FMfind = $this->FMbase->listLayouts();
+		$this->FMbase = $this->getNewFMobject();
+		$this->FMfind = $this->FMbase->listScripts();
 		if ($this->FMbase->isError($this->FMfind)) {
 		    $records = "Accès non autorisé.";
 		} else {
@@ -1124,23 +1066,13 @@ class filemakerservice {
 	 * Renvoie la liste des modèles
 	 * @return array
 	 */
-	public function getLayoutsByBddSAdmin($BDD) {
-		if($this->isSadminLogged() === true) {
-			// Create FileMaker_Command_Find on layout to search
-			$this->FMbase = new \FileMaker();
-			$this->FMbase->setProperty('database', "GEODIAG_Rapports");
-			$this->FMbase->setProperty('hostspec', 'http://localhost');
-			$this->FMbase->setProperty('username', "Sadmin");
-			$this->FMbase->setProperty('password', "Symfony76");
-			$this->FMfind = $this->FMbase->listLayouts();
-			// $result = $this->FMfind->execute();
-			if ($this->FMbase->isError($this->FMfind)) {
-			    $records = "Accès non autorisé.";
-			} else {
-				$records = $this->FMfind;
-			}
+	public function getLayouts($SERVnom = null, $BASEnom = null) {
+		$this->FMbase = $this->getNewFMobject();
+		$this->FMfind = $this->FMbase->listLayouts();
+		if ($this->FMbase->isError($this->FMfind)) {
+		    $records = "Accès non autorisé.";
 		} else {
-			$records = "Super Admin non connecté.";
+			$records = $this->FMfind;
 		}
 		return $records;
 	}
