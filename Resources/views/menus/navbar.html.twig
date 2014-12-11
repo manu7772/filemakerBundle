@@ -93,6 +93,23 @@
 			{% endblock navbarcontenu %}
 			{% block navbarloginaccount %}
 			<!-- MENU LOGIN NAVBAR -->
+			{% if is_granted("IS_AUTHENTICATED_REMEMBERED") %}
+				<div class="btn-group navbar-btn navbar-right">
+					<a href="{{ url('fos_user_profile_show') }}" type="button" class="btn btn-danger">{{ app.user.username }}</a>
+					<button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">
+						<span class="caret"></span>
+						<span class="sr-only">{{ app.user.username }}</span>
+					</button>
+					<ul class="dropdown-menu" role="menu">
+						<li><a href="{{ url('fos_user_profile_show') }}">Informations</a></li>
+						<li><a href="{{ url('fos_user_profile_edit') }}">Modifier</a></li>
+						<li class="divider"></li>
+						<li><a href="{{ url('fos_user_security_logout') }}">Quitter</a></li>
+					</ul>
+				</div>
+			{% else %}
+				<a type="button" class="btn btn-primary navbar-btn navbar-right" href="{{ url('fos_user_security_login') }}">Connexion</a>
+			{% endif %}
 			{% endblock navbarloginaccount %}
 		</div><!-- /.navbar-collapse -->
 	</div>

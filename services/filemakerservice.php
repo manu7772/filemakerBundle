@@ -333,9 +333,9 @@ class filemakerservice {
 										$access['valids'][$nomBASEbcl]["default"] = $this->defaultValueON;
 										$access['valids'][$nomBASEbcl]["current"] = $this->defaultValueON;
 										// définit la base par défaut
-										$this->setDefaultBASE($SERVnom, $nomBASEbcl);
+										$this->setDefaultBASE($nomBASEbcl, $SERVnom);
 										// définit la base courante aussi, du coup
-										$this->setCurrentBASE($SERVnom, $nomBASEbcl);
+										$this->setCurrentBASE($nomBASEbcl, $SERVnom);
 									} else {
 										$access['valids'][$nomBASEbcl]["default"] = $this->defaultValueOFF;
 										$access['valids'][$nomBASEbcl]["current"] = $this->defaultValueOFF;
@@ -475,7 +475,8 @@ class filemakerservice {
 	 * @return array/string
 	 */
 	protected function getRecords($result) {
-		if ($this->FMbase->isError($result)) {
+		$fmobj = new \FileMaker();
+		if ($fmobj->isError($result)) {
 		    $records = $result->getMessage();
 		} else {
 			$records = $result->getRecords();
@@ -545,12 +546,12 @@ class filemakerservice {
 		// $this->setUserLogg(false);
 		if((($userOrLogin !== null) && ($pass !== null)) || (is_object($userOrLogin))) {
 			if($this->define_user($userOrLogin, $pass) === true) {
+				$this->setUserLogg(true);
 				$this->FMbaseUser = $this->getNewUserFMobject();
-				if($this->FMbaseUser !== false) $this->setUserLogg(true);
-					else $this->setUserLogg(false);
+				// var_dump($this->FMbaseUser);
+				if(!is_object($this->FMbaseUser)) $this->setUserLogg(false);
 			}
 		}
-
 		return $this->isUserLogged();
 	}
 
@@ -583,10 +584,15 @@ class filemakerservice {
 	 * @param string $nomBASE
 	 * @return filemakerservice
 	 */
-	protected function setDefaultBASE($nomBASE) {
+	protected function setDefaultBASE($nomBASE, $SERVnom = null) {
+		if($SERVnom !== null) {
+			$this->setCurrentSERVER($SERVnom);
+		}
 		if(in_array($nomBASE, $this->getListOfBases($this->getCurrentSERVER(), "valids"))) {
 			$this->currentBASE = $nomBASE;
 		} else return false;
+		// Sauvegarde en session
+		$this->putDataInSession();
 		return $this;
 	}
 
@@ -598,6 +604,8 @@ class filemakerservice {
 		foreach ($this->SERVER as $SERVnom => $SERV) {
 			if($SERV['default'] === $this->defaultValueON) $this->defaultSERVER = $SERVnom;
 		}
+		// Sauvegarde en session
+		$this->putDataInSession();
 		return $this;
 	}
 
@@ -609,6 +617,8 @@ class filemakerservice {
 	protected function setUserDefined($defined = true) {
 		if(is_bool($defined)) $this->user_defined = $defined;
 			else $this->user_defined = false;
+		// Sauvegarde en session
+		$this->putDataInSession();
 		return $this;
 	}
 
@@ -620,6 +630,8 @@ class filemakerservice {
 	protected function setUserLogg($log = true) {
 		if(is_bool($log)) $this->user_logged = $log;
 			else $this->user_logged = false;
+		// Sauvegarde en session
+		$this->putDataInSession();
 		return $this;
 	}
 
@@ -646,9 +658,15 @@ class filemakerservice {
 				$this->SERVER[$SERVnom]['current'] = $this->defaultValueON;
 				// Sauvegarde en session
 				$this->putDataInSession();
-			} else return false;
+			} else {
+				$this->addError("Serveur ".$SERVnom." non trouvé.");
+				return false;
+			}
 			return $SERVnom;
-		} else return false;
+		} else {
+			$this->addError("Serveur ".$SERVnom." non trouvé.");
+			return false;
+		}
 	}
 
 	/**
@@ -657,7 +675,7 @@ class filemakerservice {
 	 * @param string $nomBASE (si null, définit la base par défaut)
 	 * @return filemakerservice
 	 */
-	public function setCurrentBASE($SERVnom = null, $nomBASE = null) {
+	public function setCurrentBASE($nomBASE = null, $SERVnom = null) {
 		if($SERVnom === null) {
 			$SERVnom = $this->getCurrentSERVER();
 		} else {
@@ -847,7 +865,7 @@ class filemakerservice {
 	 * @return string ou false si aucune
 	 */
 	public function getCurrentBASE($SERVnom = null) {
-		if($SERVnom === null) $SERVnom = $this->getDefaultSERVER();
+		if($SERVnom === null) $SERVnom = $this->getCurrentSERVER();
 		foreach($this->SERVER[$SERVnom]['databases']['valids'] as $nom => $base) {
 			if($base['current'] === $this->defaultValueON) return $nom;
 		}
@@ -860,7 +878,7 @@ class filemakerservice {
 	 * @return string ou false si aucune
 	 */
 	public function getDefaultBASE($SERVnom = null) {
-		if($SERVnom === null) $SERVnom = $this->getDefaultSERVER();
+		if($SERVnom === null) $SERVnom = $this->getCurrentSERVER();
 		foreach($this->SERVER[$SERVnom]['databases']['valids'] as $nom => $base) {
 			if($base['default'] === $this->defaultValueON) return $nom;
 		}
@@ -1045,6 +1063,24 @@ class filemakerservice {
 			if(count($records) < 1) $records = "Aucun modèle trouvé.";
 		}
 		return $records;
+	}
+
+	/**
+	 * Renvoie la liste des données demandées dans le modèle $model
+	 * @param string $model - nom du modèle
+	 * @return array ou string si erreur
+	 */
+	public function getData($model, $BASEnom = null, $SERVnom = null) {
+		if($BASEnom === null) $BASEnom = $this->getCurrentBASE();
+		if($SERVnom === null) $SERVnom = $this->getCurrentSERVER();
+		if($this->setCurrentSERVER($SERVnom) === false) return 'Serveur '.$SERVnom." absent. Impossible d'accéder aux données";
+		if($this->setCurrentBASE($BASEnom) === false) return 'Base '.$BASEnom." absente. Impossible d'accéder aux données";
+		if(!$this->layoutExists($model)) return "Modèle \"".$model."\" absent. Impossible d'accéder aux données.";
+		if(!$this->isUserLogged() === true) return "Utilisateur non connecté.";
+		if(!is_object($this->FMbaseUser)) return "Objet FileMaker non initialisé.";
+		// Create FileMaker_Command_Find on layout to search
+		$this->FMfind =& $this->FMbaseUser->newFindAllCommand($model);
+		return $this->getRecords($this->FMfind->execute());
 	}
 
 	/**
