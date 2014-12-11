@@ -19,6 +19,7 @@ class filemakerservice {
 	protected $FMbase = array();				// Objets FileMaker : 
 												// FMbase['serveur']['base']['SA_access']['objet']
 												// FMbase['serveur']['base']['US_access']['objet']
+	protected $FMbaseUser = null;
 
 	// Données globales
 	protected $SERVER = array(); 				// Liste des serveurs
@@ -37,8 +38,8 @@ class filemakerservice {
 	protected $defaultValueOFF 	= false;		// valeur OFF de l'attribut "default"
 
 	// USER
-	protected $user_defined;
-	protected $user_logged;
+	protected $user_defined = false;
+	protected $user_logged = false;
 
 	// DEV et environnement
 	protected $DEV = true;
@@ -72,11 +73,12 @@ class filemakerservice {
 	}
 
 	public function __destruct() {
-		// sauvegarde en session
-		// $this->putDataInSession();
-		// $this->putDataInSession($this->DEVdata, "filemaker_DEV");
-		// affiche les erreurs
 		$this->affErrors();
+	}
+
+	public function reinitService() {
+		// initialisation
+		$this->initializeService(null, true);
 	}
 
 	/**
@@ -87,10 +89,11 @@ class filemakerservice {
 	 * @return boolean (true si succès)
 	 */
 	protected function initializeService($file = null, $forceLoad = false) {
-		if($this->isDataInSession() === false) {
+		if($this->isDataInSession() === false || $forceLoad === true) {
 			$this->DEVdata["Chargement"] = "Scan servers & databases";
 			if($file === null) $file = $this->FMbase_paramfile;
 			if(file_exists($file)) {
+				$this->SERVER = array();
 				$xmldata = simplexml_load_file($file);
 				// $this->vardumpDev($xmldata, "Données brutes ".$this->sourceDescription);
 				$serv = $xmldata->xpath("/FMSERVERS/SERVER");
@@ -207,17 +210,24 @@ class filemakerservice {
 
 	protected function getAntTestModels($SERVnom) {
 		$SERVnom = $this->getServerByNom($SERVnom);
-		if(array_key_exists($SERVnom, $this->SERVER)) {
+		if($SERVnom !== false) {
 			// $this->echoDev('Vérification des modèles pour '.$SERVnom);
 			foreach($this->SERVER[$SERVnom]['databases']['valids'] as $BASEnom => $base) {
-				$this->echoDev('Vérification des modèles pour '.$BASEnom." (".$SERVnom.").");
-
+				$this->echoDev("Vérification des modèles pour ".$BASEnom." (".$SERVnom.").");
+				$this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'] = $this->getLayouts($SERVnom, $BASEnom, true);
 			}
 		}
 	}
 
 	protected function getAntTestScripts($SERVnom) {
-		
+		$SERVnom = $this->getServerByNom($SERVnom);
+		if($SERVnom !== false) {
+			// $this->echoDev('Vérification des modèles pour '.$SERVnom);
+			foreach($this->SERVER[$SERVnom]['databases']['valids'] as $BASEnom => $base) {
+				$this->echoDev("Vérification des scripts pour ".$BASEnom." (".$SERVnom.").");
+				$this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['scripts'] = $this->getScripts($SERVnom, $BASEnom, true);
+			}
+		}
 	}
 
 	/**
@@ -532,37 +542,18 @@ class filemakerservice {
 	 * @return boolean
 	 */
 	public function log_user($userOrLogin = null, $pass = null) {
-		$this->setUserLogg(false);
+		// $this->setUserLogg(false);
 		if((($userOrLogin !== null) && ($pass !== null)) || (is_object($userOrLogin))) {
-			if($this->isUserDefined($userOrLogin, $pass)) {
-				$this->FMbase = new \FileMaker();
-				// GEODIAG_Rapports
-				$this->FMbase[$this->getCurrentBASE()]->setProperty('database', $this->dbname);
-				$this->FMbase[$this->getCurrentBASE()]->setProperty('hostspec', 'http://localhost');
-				$this->FMbase[$this->getCurrentBASE()]->setProperty('username', $this->loguser);
-				$this->FMbase[$this->getCurrentBASE()]->setProperty('password', $this->logpass);
-				$this->setUserLogg(true);
+			if($this->define_user($userOrLogin, $pass) === true) {
+				$this->FMbaseUser = $this->getNewUserFMobject();
+				if($this->FMbaseUser !== false) $this->setUserLogg(true);
+					else $this->setUserLogg(false);
 			}
 		}
 
 		return $this->isUserLogged();
 	}
 
-	/**
-	 * log sadmin
-	 * @return boolean
-	 */
-	public function log_sadmin($BDD = null) {
-		if($BDD === null) $BDD = $this->dbname;
-		if($this->isSadminDefined() && $this->dbname !== null) {
-			$this->FMbase = new \FileMaker($BDD);
-			$this->FMbase->setProperty('username', $this->dbuserSA);
-			$this->FMbase->setProperty('password', $this->dbpassSA);
-			$this->setSadminLogged(true);
-		} else $this->setSadminLogged(false);
-
-		return $this->isSadminLogged();
-	}
 
 	// ***********************
 	// SETTERS privés
@@ -615,7 +606,7 @@ class filemakerservice {
 	 * @param boolean
 	 * @return filemakerservice
 	 */
-	protected function setUserDefined($defined) {
+	protected function setUserDefined($defined = true) {
 		if(is_bool($defined)) $this->user_defined = $defined;
 			else $this->user_defined = false;
 		return $this;
@@ -626,7 +617,7 @@ class filemakerservice {
 	 * @param boolean
 	 * @return filemakerservice
 	 */
-	protected function setUserLogg($log) {
+	protected function setUserLogg($log = true) {
 		if(is_bool($log)) $this->user_logged = $log;
 			else $this->user_logged = false;
 		return $this;
@@ -757,16 +748,61 @@ class filemakerservice {
 	}
 
 	/**
-	 * Renvoie un nouvel objet FileMaker
+	 * Renvoie un nouvel objet FileMaker connecté en Sadmin
 	 * @return FileMaker
 	 */
-	protected function getNewFMobject() {
+	protected function getNewSadminFMobject($SERVnom = null, $BASEnom = null) {
+		if($SERVnom === null) {
+			$SERVnom = $this->getCurrentSERVER();
+			$IP = $this->getCurrentIP();
+		} else if($this->serverExists($SERVnom)) {
+			$IP = $this->SERVER[$SERVnom]['ip'];
+		} else return false;
+		if($BASEnom === null) {
+			$BASEnom = $this->getCurrentBASE();
+		} else if(!$this->baseExists($BASEnom)) {
+			return false;
+		}
 		$FMbase = new \FileMaker();
-		$FMbase->setProperty('database', $this->getCurrentBASE());
-		$FMbase->setProperty('hostspec', $this->getCurrentIP());
+		$FMbase->setProperty('hostspec', $IP);
+		$FMbase->setProperty('database', $BASEnom);
 		$FMbase->setProperty('username', $this->getCurrentSAdminLogin());
 		$FMbase->setProperty('password', $this->getCurrentSAdminPasse());
 		return $FMbase;
+	}
+
+	/**
+	 * Renvoie un nouvel objet FileMaker connecté en User
+	 * @param string $login
+	 * @param string $passe
+	 * @param string $BASEnom
+	 * @param string $SERVnom
+	 * @return FileMaker ou false si erreur
+	 */
+	protected function getNewUserFMobject($login = null, $passe = null, $SERVnom = null, $BASEnom = null) {
+		if($login === null) $login = $this->loguser;
+		if($passe === null) $passe = $this->logpass;
+		if($this->isUserLogged() === true) {
+			if($SERVnom === null) {
+				$SERVnom = $this->getCurrentSERVER();
+				$IP = $this->getCurrentIP();
+			} else if($this->serverExists($SERVnom)) {
+				$IP = $this->SERVER[$SERVnom]['ip'];
+			} else return false;
+			if($BASEnom === null) {
+				$BASEnom = $this->getCurrentBASE();
+			} else if(!$this->baseExists($BASEnom)) {
+				return false;
+			}
+			$FMbase = new \FileMaker();
+			$FMbase->setProperty('hostspec', $IP);
+			$FMbase->setProperty('database', $BASEnom);
+			$FMbase->setProperty('username', $login);
+			$FMbase->setProperty('password', $passe);
+			return $FMbase;
+		} else {
+			return false;
+		}
 	}
 
 
@@ -859,26 +895,6 @@ class filemakerservice {
 		return $data;
 	}
 
-	// /**
-	//  * Renvoie la liste des serveurs
-	//  * @return array
-	//  */
-	// public function getServers() {
-	// 	if($this->isUserLogged() === true) {
-	// 		return $this->getListOfServersNames();
-	// 	} else return false;
-	// }
-
-	// /**
-	//  * Renvoie la liste des bases de données
-	//  * @return array
-	//  */
-	// public function getDatabases($SERVnom = null) {
-	// 	if($this->isUserLogged() === true) {
-	// 		return $this->getListOfServersNames();
-	// 	} else return false;
-	// }
-
 	/**
 	 * liste des noms de serveurs
 	 * @return array / string si aucun serveur
@@ -890,6 +906,52 @@ class filemakerservice {
 			$list[] = $nom;
 		}
 		return $list;
+	}
+
+	/**
+	 * Vérifie si un serveur existe
+	 * @param string $servername - nom du serveur
+	 * @return boolean
+	 */
+	public function serverExists($servername) {
+		if(array_key_exists($servername, $this->SERVER)) return true;
+			else return false;
+	}
+
+	/**
+	 * Vérifie si une base existe
+	 * @param string $basename - nom de la base
+	 * @param string $servername - nom du serveur (serveur courant si null)
+	 * @return boolean
+	 */
+	public function baseExists($basename, $servername = null) {
+		if($servername === null) $servername = $this->getCurrentSERVER();
+		if(array_key_exists($basename, $this->SERVER[$servername]['databases']['valids'])) return true;
+			else return false;
+	}
+
+	/**
+	 * Vérifie si un script existe pour la base courante
+	 * @param string $scriptname - nom du script
+	 * @return boolean
+	 */
+	public function scriptExists($scriptname, $basename = null, $servername = null) {
+		if($basename === null) $basename = $this->getCurrentBASE();
+		if($servername === null) $servername = $this->getCurrentSERVER();
+		if(in_array($scriptname, $this->SERVER[$this->getCurrentSERVER()]['databases']['valids'][$this->getCurrentBASE()]['scripts'])) return true;
+			else return false;
+	}
+
+	/**
+	 * Vérifie si un modèle existe pour la base courante
+	 * @param string $layoutname - nom du layout
+	 * @return boolean
+	 */
+	public function layoutExists($layoutname, $basename = null, $servername = null) {
+		if($basename === null) $basename = $this->getCurrentBASE();
+		if($servername === null) $servername = $this->getCurrentSERVER();
+		if(in_array($layoutname, $this->SERVER[$this->getCurrentSERVER()]['databases']['valids'][$this->getCurrentBASE()]['layouts'])) return true;
+			else return false;
 	}
 
 	/**
@@ -918,146 +980,37 @@ class filemakerservice {
 		} else return false;
 	}
 
-
-
-	// *************************
-	// METHODES GÉODEM
-	// *************************
-
-	/**
-	 * Renvoie la liste des lieux
-	 * @return array
-	 */
-	public function getLieux() {
-		if($this->isUserLogged() === true) {
-			// Create FileMaker_Command_Find on layout to search
-			$this->FMfind =& $this->FMbase->newFindAllCommand('Lieu_Liste');
-			$this->FMfind->addSortRule('cle', 1, FILEMAKER_SORT_DESCEND);
-			return $this->getRecords($this->FMfind->execute());
-		} else {
-			$records = "Utilisateur non connecté.";
-			return $records;
-		}
-	}
-
-	/**
-	 * Renvoie la liste des lieux
-	 * @return array
-	 */
-	public function getRapports($etat = 'all') {
-		if($this->isUserLogged() === true) {
-			$vals = array(0 => "0", 1 => "1");
-			// Create FileMaker_Command_Find on layout to search
-			$this->FMfind =& $this->FMbase->newFindCommand('Rapports_Local');
-			if(in_array($etat, $vals)) {
-				$this->FMfind->addFindCriterion('a_traiter', intval($etat));
-			}
-			$this->FMfind->addSortRule('id', 1, FILEMAKER_SORT_DESCEND);
-			return $this->getRecords($this->FMfind->execute());
-		} else {
-			$records = "Utilisateur non connecté.";
-			return $records;
-		}
-	}
-
-	// public function getRelatedSets() {
-	// 	if($this->isUserLogged() === true) {
-	// 		// Create FileMaker_Command_Find on layout to search
-	// 		$this->FMfind =& $this->FMbase->newFindCommand('Rapports_Local');
-	// 		$this->FMfind->addSortRule('id', 1, FILEMAKER_SORT_DESCEND);
-	// 		return $this->getRecords($this->FMfind->execute());
-	// 	} else {
-	// 		$records = "Utilisateur non connecté.";
-	// 		return $records;
-	// 	}
-	// }
-
-	// Exemple
-	// $relatedSet = $currentRecord->getRelatedSet(’customers’); /* Exécuté sur chacune des lignes de la table externe */ foreach ($relatedSet as $nextRow) {
-	// $nameField = $nextRow->getField(’customer::name’) if ($nameField == $badName ) {
-	// 	$result =   $newRow->delete();
-	// }
-
-	/**
-	 * Renvoie la liste des lieux
-	 * @return array
-	 */
-	public function getRapportsLieux() {
-		if($this->isUserLogged() === true) {
-			// $vals = array(0 => "0", 1 => "1");
-			// Create FileMaker_Command_Find on layout to search
-			$this->FMfind =& $this->FMbase->newFindAllCommand('Lieu_Liste');
-			$this->FMfind->addSortRule('cle', 1, FILEMAKER_SORT_DESCEND);
-			$result = $this->FMfind->execute();
-			return $this->getRecords($result);
-		} else {
-			return "Utilisateur non connecté.";
-		}
-	}
-
-	/**
-	 * Renvoie la liste des locaux d'un ou plusieurs lieux
-	 * @param array $lieux
-	 * @return array
-	 */
-	public function getLocauxByLieux($lieux = null) {
-		if($this->isUserLogged() === true) {
-			// Create FileMaker_Command_Find on layout to search
-			$this->FMfind =& $this->FMbase->newFindAllCommand('Locaux_IPAD');
-			$this->FMfind->addSortRule('ref_local', 1, FILEMAKER_SORT_DESCEND);
-			return $this->getRecords($this->FMfind->execute());
-		} else {
-			$records = "Utilisateur non connecté.";
-			return $records;
-		}
-	}
-
-	/**
-	 * Renvoie la liste des affaires
-	 * @return array
-	 */
-	public function getAffaires() {
-		if($this->isUserLogged() === true) {
-			// Create FileMaker_Command_Find on layout to search
-			$this->FMfind =& $this->FMbase->newFindAllCommand('Projet_liste');
-			$this->FMfind->addSortRule('date_projet', 1, FILEMAKER_SORT_DESCEND);
-			return $this->getRecords($this->FMfind->execute());
-		} else {
-			$records = "Utilisateur non connecté.";
-			return $records;
-		}
-	}
-
-	/**
-	 * Renvoie la liste des tiers
-	 * @return array
-	 */
-	public function getTiers() {
-		if($this->isUserLogged() === true) {
-			// Create FileMaker_Command_Find on layout to search
-			$this->FMfind =& $this->FMbase->newFindAllCommand('Tiers_Liste');
-			$this->FMfind->addSortRule('ref', 1, FILEMAKER_SORT_DESCEND);
-			return $this->getRecords($this->FMfind->execute());
-		} else {
-			$records = "Utilisateur non connecté.";
-			return $records;
-		}
-	}
-
 	/**
 	 * Renvoie la liste des scripts
  	 * @param string $SERVnom - nom du serveur (ou serveur par défaut si null)
 	 * @param string $BASEnom - nom de la base (ou base par défaut si null)
 	 * @return array / string
 	 */
-	public function getScripts($SERVnom = null, $BASEnom = null) {
-		// Create FileMaker_Command_Find on layout to search
-		$this->FMbase = $this->getNewFMobject();
-		$this->FMfind = $this->FMbase->listScripts();
-		if ($this->FMbase->isError($this->FMfind)) {
-		    $records = "Accès non autorisé.";
+	public function getScripts($SERVnom = null, $BASEnom = null, $forceLoad = false) {
+		if($SERVnom === null) {
+			$SERVnom = $this->getCurrentSERVER();
+		} else if(!$this->serverExists($SERVnom)) {
+			return false;
+		}
+		if($BASEnom === null) {
+			$BASEnom = $this->getCurrentBASE();
+		} else if(!$this->baseExists($BASEnom)) {
+			return false;
+		}
+		if($forceLoad === true) {
+			// scan
+			// Create FileMaker_Command_Find on layout to search
+			$this->FMbase = $this->getNewSadminFMobject($SERVnom, $BASEnom);
+			$this->FMfind = $this->FMbase->listScripts();
+			if ($this->FMbase->isError($this->FMfind)) {
+			    $records = "Accès non autorisé.";
+			} else {
+				$records = $this->FMfind;
+			}
 		} else {
-			$records = $this->FMfind;
+			// Chargement depuis $SERVER
+			$records = $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['scripts'];
+			if(count($records) < 1) $records = "Aucun script trouvé.";
 		}
 		return $records;
 	}
@@ -1066,13 +1019,30 @@ class filemakerservice {
 	 * Renvoie la liste des modèles
 	 * @return array
 	 */
-	public function getLayouts($SERVnom = null, $BASEnom = null) {
-		$this->FMbase = $this->getNewFMobject();
-		$this->FMfind = $this->FMbase->listLayouts();
-		if ($this->FMbase->isError($this->FMfind)) {
-		    $records = "Accès non autorisé.";
+	public function getLayouts($SERVnom = null, $BASEnom = null, $forceLoad = false) {
+		if($SERVnom === null) {
+			$SERVnom = $this->getCurrentSERVER();
+		} else if(!$this->serverExists($SERVnom)) {
+			return false;
+		}
+		if($BASEnom === null) {
+			$BASEnom = $this->getCurrentBASE();
+		} else if(!$this->baseExists($BASEnom)) {
+			return false;
+		}
+		if($forceLoad === true) {
+			// scan
+			$this->FMbase = $this->getNewSadminFMobject($SERVnom, $BASEnom);
+			$this->FMfind = $this->FMbase->listLayouts();
+			if ($this->FMbase->isError($this->FMfind)) {
+			    $records = "Accès non autorisé.";
+			} else {
+				$records = $this->FMfind;
+			}
 		} else {
-			$records = $this->FMfind;
+			// Chargement depuis $SERVER
+			$records = $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'];
+			if(count($records) < 1) $records = "Aucun modèle trouvé.";
 		}
 		return $records;
 	}

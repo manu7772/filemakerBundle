@@ -31,8 +31,11 @@
 				<li class="dropdown">
 					<a href="{{ url('ensemble01filemaker_pageweb') }}" class="dropdown-toggle" data-toggle="dropdown">Data Sadmin <span class="caret"></span></a>
 					<ul class="dropdown-menu" role="menu">
+						<li><a href="?fmreload=reload">Recharger</a></li>
+						<li class="divider"></li>
 						<li role="presentation" class="dropdown-header">Serveurs</li>
 						{% for server, data in fmservice %}
+						{% if data.statut == true %}
 						{% if data.current == true %}
 							{% set active = " class='disabled'" %}
 							{% set arrow = "&gt; " %}
@@ -42,8 +45,10 @@
 							{% set arrow = "" %}
 						{% endif %}
 						<li{{ active|raw }}>
-							<a href="{{ url('ensemble01filemaker_changeserver', {servernom: data.nom, page: page}) }}" title="{{ data.ip }}">{{ arrow|raw }}{{ data.nom }}</a>
+							{# <a href="{{ url('ensemble01filemaker_changeserver', {servernom: data.nom, page: page}) }}" title="{{ data.ip }}">{{ arrow|raw }}{{ data.nom }}</a> #}
+							<a href="?serverchange={{ data.nom }}" title="Changer de serveur pour {{ data.ip }}">{{ arrow|raw }}{{ data.nom }}</a>
 						</li>
+						{% endif %}
 						{% endfor %}
 						<li class="divider"></li>
 						<li role="presentation" class="dropdown-header">Bases <small>({{ currentserver }})</small></li>
@@ -57,7 +62,8 @@
 							{% set arrow = "" %}
 						{% endif %}
 						<li{{ active|raw }}>
-							<a href="{{ url('ensemble01filemaker_changebase', {basenom: data.nom, page: page}) }}"{% if data.descriptif is defined %} title = "{{ data.descriptif }}"{% endif %}>{{ arrow|raw }}{{ data.nom }}</a>
+							{# <a href="{{ url('ensemble01filemaker_changebase', {basenom: data.nom, page: page}) }}"{% if data.descriptif is defined %} title = "{{ data.descriptif }}"{% endif %}>{{ arrow|raw }}{{ data.nom }}</a> #}
+							<a href="?basechange={{ data.nom }}"{% if data.descriptif is defined %} title = "Changer de base pour {{ data.descriptif }}"{% endif %}>{{ arrow|raw }}{{ data.nom }}</a>
 						</li>
 						{% endfor %}
 						<li class="divider"></li>
