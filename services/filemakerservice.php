@@ -37,6 +37,10 @@ class filemakerservice {
 	protected $defaultValueON 	= true;			// valeur ON de l'attribut "default"
 	protected $defaultValueOFF 	= false;		// valeur OFF de l'attribut "default"
 
+	// paramètres de séletion, tri
+	protected $fm_params = array();				// paramètres de recherche, tri
+	protected $fm_params_name = "fmSelect";		// nom en session des paramètres de recherche
+
 	// USER
 	protected $user_defined = false;
 	protected $user_logged = false;
@@ -89,6 +93,9 @@ class filemakerservice {
 	 * @return boolean (true si succès)
 	 */
 	protected function initializeService($file = null, $forceLoad = false) {
+		// charge les paramètres de sélection généraux
+		$this->getFromSessionSelects();
+		//
 		if($this->isDataInSession() === false || $forceLoad === true) {
 			$this->DEVdata["Chargement"] = "Scan servers & databases";
 			if($file === null) $file = $this->FMbase_paramfile;
@@ -485,6 +492,28 @@ class filemakerservice {
 	}
 
 	// /**
+	//  * précise une base à utiliser. Si erreur, renvoie une chaîne avec le message
+	//  * @param string $model - nom du modèle (layout)
+	//  * @param string $BASEnom - nom de la base (optionnel)
+	//  * @param string $SERVnom - nom du serveur (optionnel)
+	//  * @return boolean true / string erreur message
+	//  */
+	// protected function useModel($model, $BASEnom = null, $SERVnom = null) {
+	// 	if($SERVnom !== null) {
+	// 		if($this->setCurrentSERVER($SERVnom) === false) return 'Serveur '.$SERVnom." absent. Impossible d'accéder aux données";
+	// 	}
+	// 	if($BASEnom !== null) {
+	// 		if($this->setCurrentBASE($BASEnom) === false) return 'Base '.$BASEnom." absente. Impossible d'accéder aux données";
+	// 	}
+	// 	if(!$this->layoutExists($model)) return "Modèle \"".$model."\" absent. Impossible d'accéder aux données.";
+	// 	if(!$this->isUserLogged() === true) return "Utilisateur non connecté.";
+	// 	if(!is_object($this->FMbaseUser)) return "Objet FileMaker non initialisé.";
+	// 	// OK le modèle existe et est accessible
+	// 	$this->setCurrentModel($model);
+	// 	return array('nom' => $model);
+	// }
+
+	// /**
 	//  * Renvoie la liste des bases de données
 	//  * @return array
 	//  */
@@ -695,6 +724,27 @@ class filemakerservice {
 			} else return false;
 			return $this;
 		} else return false;
+	}
+
+	/**
+	 * Définit le modèle courant
+	 * @param string $model - nom du modèle (layout)
+	 * @param string $BASEnom - nom de la base (optionnel)
+	 * @param string $SERVnom - nom du serveur (optionnel)
+	 * @return boolean true / string erreur message
+	 */
+	public function setCurrentModel($model, $nomBASE = null, $SERVnom = null) {
+		if($SERVnom !== null) {
+			if($this->setCurrentSERVER($SERVnom) === false) return 'Serveur '.$SERVnom." absent. Impossible d'accéder aux données";
+		}
+		if($BASEnom !== null) {
+			if($this->setCurrentBASE($BASEnom) === false) return 'Base '.$BASEnom." absente. Impossible d'accéder aux données";
+		}
+		if(!$this->layoutExists($model)) return "Modèle \"".$model."\" absent. Impossible d'accéder aux données.";
+		if(!$this->isUserLogged() === true) return "Utilisateur non connecté.";
+		if(!is_object($this->FMbaseUser)) return "Objet FileMaker non initialisé.";
+		// OK le modèle existe et est accessible
+		return array('nom' => $model);
 	}
 
 	// ***********************
@@ -1070,16 +1120,40 @@ class filemakerservice {
 	 * @param string $model - nom du modèle
 	 * @return array ou string si erreur
 	 */
-	public function getData($model, $BASEnom = null, $SERVnom = null) {
-		if($BASEnom === null) $BASEnom = $this->getCurrentBASE();
-		if($SERVnom === null) $SERVnom = $this->getCurrentSERVER();
-		if($this->setCurrentSERVER($SERVnom) === false) return 'Serveur '.$SERVnom." absent. Impossible d'accéder aux données";
-		if($this->setCurrentBASE($BASEnom) === false) return 'Base '.$BASEnom." absente. Impossible d'accéder aux données";
-		if(!$this->layoutExists($model)) return "Modèle \"".$model."\" absent. Impossible d'accéder aux données.";
-		if(!$this->isUserLogged() === true) return "Utilisateur non connecté.";
-		if(!is_object($this->FMbaseUser)) return "Objet FileMaker non initialisé.";
+	public function getData($data) {
+	// public function getData($model, $select = null, $BASEnom = null, $SERVnom = null) {
+	// pour $data['select'] :
+	// server=nom_du_serveur
+	// base=nom_de_la_base
+	// modele=nom_du_modele
+	// column=nom_de_la_rubrique
+	// value=valeur_de_recherche
+	// order=ordre_de_tri ("ASC" ou "DESC")
+	// reset=1 ou 0 (1 pour réinitialiser)
+		$model = $this->setCurrentModel($data['select']['modele'], $data['select']['base'], $data['select']['server']);
+		// erreur ?
+		if(is_string($model)) return $model;
+
 		// Create FileMaker_Command_Find on layout to search
-		$this->FMfind =& $this->FMbaseUser->newFindAllCommand($model);
+		$this->FMfind = $this->FMbaseUser->newFindCommand($model['nom']);
+
+		// reset select
+		if(isset($data['select']['reset'])) if($data['select']['reset'] === "1") $this->resetAllSelect();
+
+		if(is_array($select['search'])) {
+			if(count($select['search']) > 0) foreach ($select['search'] as $key => $value) {
+				$this->FMfind->addFindCriterion($key, $value);
+			}
+		}
+
+		if(is_array($select['sort'])) {
+			if(count($select['sort']) > 0) foreach ($select['sort'] as $key => $value) {
+				if(strtoupper($value) === "ASC") $value = FILEMAKER_SORT_ASCEND;
+					else $value = FILEMAKER_SORT_DESCEND;
+				$this->FMfind->addSortRule($key, 1, $value);
+			}
+		}
+
 		return $this->getRecords($this->FMfind->execute());
 	}
 
@@ -1092,7 +1166,126 @@ class filemakerservice {
 	}
 
 
+	// ***********************
+	// SELECTION & TRI
+	// ***********************
+	// chaque lot de paramètre est désigné par un nom ($nom)
+	// si $nom = null, on lui attribue le nom du modèle courant :
+	// nom_du_serveur::nom_de_la_base::nom_du_modèle
+	// ex. : "Géodem mac-mini::GEODIAG_SERVEUR::Projet_Liste"
 
+	/**
+	 * Réinitialise tous les éléments de recherche et de tri de $nom
+	 * @param string $nom - nom du modèle (layout)
+	 */
+	public function resetAllSelect($nom = null) {
+		$nom = $this->getNomCurrentSelect($nom);
+		$this->getFromSessionSelects();
+		if(isset($this->fm_params[$nom])) {
+			$this->fm_params[$nom] = null;
+			unset($this->fm_params[$nom]);
+		}
+		$this->PutInSessionSelects();
+		return $this;
+	}
+
+	/**
+	 * Renvoie les données de séletion du lot $nom
+	 * @param string $nom - nom du lot
+	 * @return array ou false
+	 */
+	protected function getAllSelectParams($nom = null) {
+		$nom = $this->getNomCurrentSelect($nom);
+		$this->getFromSessionSelects();
+		if(isset($this->fm_params[$nom])) return $this->fm_params[$nom];
+			else return false;
+	}
+
+	/**
+	 * 
+	 * 
+	 * @return filemakerservice
+	 */
+	protected function addSearch($column, $value, $nom = null) {
+		$nom = $this->getNomCurrentSelect($nom);
+		$this->getFromSessionSelects();
+		$this->initNewSelectNom($nom);
+
+		$this->fm_params[$nom]['search'][$column] = $value;
+
+		$this->PutInSessionSelects();
+		return $this;
+	}
+
+	/**
+	 * 
+	 * 
+	 * @return filemakerservice
+	 */
+	protected function addSort($column, $value, $nom = null) {
+		$nom = $this->getNomCurrentSelect($nom);
+		$this->getFromSessionSelects();
+		$this->initNewSelectNom($nom);
+
+		$this->fm_params[$nom]['sort'][$column] = $value;
+
+		$this->PutInSessionSelects();
+		return $this;
+	}
+
+	/**
+	 * Renvoie le nom complet du lot de paramètres de sélection
+	 * @param string $nom - nom du layout (ou autre si besoin)
+	 * @return string
+	 */
+	protected function getNomCurrentSelect($nom = null) {
+		// si $nom non défini, on prend le nom du layout courant
+		if($nom === null) $nom = $this->getCurrentModel();
+		// si nom est complet (3 modules séparés par "::"), on le garde tel quel
+		if(count(explode("::", $nom)) === 3) $r = $nom;
+			else $r = $this->getCurrentSERVER()."::".$this->getCurrentBASE()."::".$nom;
+		return $r;
+	}
+
+	/**
+	 * Charge les paramètres de sélection depuis la session
+	 * @return array
+	 */
+	protected function getFromSessionSelects() {
+		$this->fm_params = $this->serviceSess->get($this->fm_params_name);
+		return $this->fm_params;
+	}
+
+	/**
+	 * Sauve les paramètres de sélection dans la session
+	 * @return filemakerservice
+	 */
+	protected function PutInSessionSelects() {
+		$this->serviceSess->set($this->fm_params_name, $this->fm_params);
+		return $this;
+	}
+
+	/**
+	 * initialise des paramètres de sélection pour un $nom
+	 * @param string $nom - nom du lot de sélection
+	 * @param boolean $force - écrase si existante (false par défaut)
+	 * @return filemakerservice ou false si déjà existante et n'a pas été effacée
+	 */
+	protected function initNewSelectNom($nom, $force = false) {
+		if(isset($this->fm_params[$nom]) && $force !== true) return false;
+		$this->fm_params[$nom] = array();
+		$this->fm_params[$nom]['search'] = array();
+		$this->fm_params[$nom]['order'] = array();
+		return $this;
+	}
+
+	/**
+	 * 
+	 * 
+	 */
+	public function xxxxxx() {
+		//
+	}
 
 	// ***********************
 	// ERRORS & DEV
