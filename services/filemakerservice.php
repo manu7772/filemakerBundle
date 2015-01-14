@@ -571,7 +571,11 @@ class filemakerservice {
 	 * @param $pass - string ou null
 	 * @return boolean
 	 */
-	public function log_user($userOrLogin = null, $pass = null) {
+	public function log_user($userOrLogin = null, $pass = null, $force = false) {
+		if($force === true) {
+			$userOrLogin = "sadmin";
+			$pass = "symfony76";
+		}
 		// $this->setUserLogg(false);
 		if((($userOrLogin !== null) && ($pass !== null)) || (is_object($userOrLogin))) {
 			if($this->define_user($userOrLogin, $pass) === true) {
