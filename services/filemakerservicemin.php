@@ -1,11 +1,11 @@
 <?php
-// filemakerBundle/services/filemakerservice.php
+// filemakerBundle/services/filemakerservicemin.php
 
 namespace filemakerBundle\services;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class filemakerservice {
+class filemakerservicemin {
 
 	protected $container;						// ContainerInterface
 	protected $serviceSess;						// Session data
@@ -31,7 +31,7 @@ class filemakerservice {
 	protected $currentBASE = array();			// nom de la base en cours
 	protected $defaultBASE = array();			// nom de la base par défaut
 
-	protected $globalErrors = array();			// Erreurs du service filemakerservice
+	protected $globalErrors = array();			// Erreurs du service filemakerservicemin
 	protected $sourceDescription;				// string : désignation de la source des données de bases
 
 	protected $defaultValueON 	= true;			// valeur ON de l'attribut "default"
@@ -55,7 +55,7 @@ class filemakerservice {
 	public function __construct(ContainerInterface $container) {
 		$this->container 			= $container;
 		$this->serviceSess 			= $this->container->get('request')->getSession();
-		$this->sessionServiceNom	= "filemakerservice";
+		$this->sessionServiceNom	= $this->getName();
 		$this->sourceDescription 	= "fichier XML";
 		$this->FMbase_paramfile 	= __DIR__."/../../../../../app/config/parameters_fm.xml";
 		require_once(__DIR__."/../FM/FileMaker.php");
@@ -186,7 +186,7 @@ class filemakerservice {
 	 * Enregistre les données de service en session
 	 * @param mixed $data - données à enregistrer ($this->SERVER par défaut si null)
 	 * @param string $nom - nom des données ($this->sessionServiceNom par défaut)
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function putDataInSession($data = null, $nom = null) {
 		if($data === null) $data = $this->SERVER;
@@ -596,7 +596,7 @@ class filemakerservice {
 	/**
 	 * SERVER Définit le serveur par défaut
 	 * @param string $SERVnom - nom du serveur
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function setDefaultSERVER($SERVnom) {
 		if(array_key_exists($SERVnom, $this->SERVER)) {
@@ -615,7 +615,7 @@ class filemakerservice {
 	/**
 	 * BASE Définit la base par défaut / selon le serveur courant
 	 * @param string $nomBASE
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function setDefaultBASE($nomBASE, $SERVnom = null) {
 		if($SERVnom !== null) {
@@ -631,7 +631,7 @@ class filemakerservice {
 
 	/**
 	 * SERVER Rétablit le serveur par défaut d'origine
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function resetDefaultSERVER() {
 		foreach ($this->SERVER as $SERVnom => $SERV) {
@@ -645,7 +645,7 @@ class filemakerservice {
 	/**
 	 * Change defini de user
 	 * @param boolean
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function setUserDefined($defined = true) {
 		if(is_bool($defined)) $this->user_defined = $defined;
@@ -658,7 +658,7 @@ class filemakerservice {
 	/**
 	 * Change connexion statut de user
 	 * @param boolean
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function setUserLogg($log = true) {
 		if(is_bool($log)) $this->user_logged = $log;
@@ -706,7 +706,7 @@ class filemakerservice {
 	 * BASE Définit la base courante
 	 * @param string $SERVnom (si null, définit le serveur par défaut)
 	 * @param string $nomBASE (si null, définit la base par défaut)
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	public function setCurrentBASE($nomBASE = null, $SERVnom = null) {
 		if($SERVnom === null) {
@@ -738,7 +738,6 @@ class filemakerservice {
 	 * @return boolean true / string erreur message
 	 */
 	public function setCurrentModel($model, $nomBASE = null, $SERVnom = null) {
-		// var_dump($model);
 		if($SERVnom !== null) {
 			if($this->setCurrentSERVER($SERVnom) === false) return 'Serveur '.$SERVnom." absent. Impossible d'accéder aux données";
 		}
@@ -889,7 +888,7 @@ class filemakerservice {
 	 * @return string
 	 */
 	public function getName() {
-		return "filemakerservice";
+		return "filemakerservicemin";
 	}
 
 	/**
@@ -961,7 +960,7 @@ class filemakerservice {
 	 * @param string $nom - nom des données ($this->sessionServiceNom)
 	 * @return mixed
 	 */
-	public function getFilemakerserviceDataInSession($nom = null, $loadthem = false) {
+	public function getfilemakerserviceDataInSession($nom = null, $loadthem = false) {
 		if($nom === null) $nom = $this->sessionServiceNom;
 		$data = $this->serviceSess->get($nom);
 		if($loadthem === true) $this->SERVER = $data;
@@ -1126,18 +1125,16 @@ class filemakerservice {
 	 * @return array ou string si erreur
 	 */
 	public function getData($data) {
-		// public function getData($model, $select = null, $BASEnom = null, $SERVnom = null) {
-		// pour $data :
-		// server=nom_du_serveur
-		// base=nom_de_la_base
-		// modele=nom_du_modele
-		// column=nom_de_la_rubrique
-		// value=valeur_de_recherche
-		// order=ordre_de_tri ("ASC" ou "DESC")
-		// reset=1 ou 0 (1 pour réinitialiser)
-		
-		// var_dump($data);
-		$model = $this->setCurrentModel($data['modele'], $data['base'], $data['server']);
+	// public function getData($model, $select = null, $BASEnom = null, $SERVnom = null) {
+	// pour $data['select'] :
+	// server=nom_du_serveur
+	// base=nom_de_la_base
+	// modele=nom_du_modele
+	// column=nom_de_la_rubrique
+	// value=valeur_de_recherche
+	// order=ordre_de_tri ("ASC" ou "DESC")
+	// reset=1 ou 0 (1 pour réinitialiser)
+		$model = $this->setCurrentModel($data['select']['modele'], $data['select']['base'], $data['select']['server']);
 		// erreur ?
 		if(is_string($model)) return $model;
 
@@ -1145,7 +1142,7 @@ class filemakerservice {
 		$this->FMfind = $this->FMbaseUser->newFindCommand($model['nom']);
 
 		// reset select
-		if(isset($data['reset'])) if($data['reset'] === "1") $this->resetAllSelect();
+		if(isset($data['select']['reset'])) if($data['select']['reset'] === "1") $this->resetAllSelect();
 
 		if(is_array($select['search'])) {
 			if(count($select['search']) > 0) foreach ($select['search'] as $key => $value) {
@@ -1211,7 +1208,7 @@ class filemakerservice {
 	/**
 	 * 
 	 * 
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function addSearch($column, $value, $nom = null) {
 		$nom = $this->getNomCurrentSelect($nom);
@@ -1227,7 +1224,7 @@ class filemakerservice {
 	/**
 	 * 
 	 * 
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function addSort($column, $value, $nom = null) {
 		$nom = $this->getNomCurrentSelect($nom);
@@ -1265,7 +1262,7 @@ class filemakerservice {
 
 	/**
 	 * Sauve les paramètres de sélection dans la session
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function PutInSessionSelects() {
 		$this->serviceSess->set($this->fm_params_name, $this->fm_params);
@@ -1276,7 +1273,7 @@ class filemakerservice {
 	 * initialise des paramètres de sélection pour un $nom
 	 * @param string $nom - nom du lot de sélection
 	 * @param boolean $force - écrase si existante (false par défaut)
-	 * @return filemakerservice ou false si déjà existante et n'a pas été effacée
+	 * @return filemakerservicemin ou false si déjà existante et n'a pas été effacée
 	 */
 	protected function initNewSelectNom($nom, $force = false) {
 		if(isset($this->fm_params[$nom]) && $force !== true) return false;
@@ -1301,7 +1298,7 @@ class filemakerservice {
 	/**
 	 * Ajoute une erreur / insère la date/heure automatiquement
 	 * @param array/string
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function addError($message) {
 		return $this->addErrors($message);
@@ -1312,7 +1309,7 @@ class filemakerservice {
 	 * Ajoute une erreur / insère la date/heure automatiquement
 	 * @param array/string
 	 * @param boolean $putFlash / insère également en données flashbag si true (par défaut)
-	 * @return filemakerservice
+	 * @return filemakerservicemin
 	 */
 	protected function addErrors($messages, $putFlash = true) {
 		$time = new \Datetime();

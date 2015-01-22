@@ -3,3 +3,8 @@ services:
     filemaker.database:
         class: filemakerBundle\services\filemakerservice
         arguments: [@service_container]
+
+    filemakermin.database:
+        class: filemakerBundle\services\filemakerservicemin
+        arguments: [@service_container]
+
