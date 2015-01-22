@@ -1135,7 +1135,7 @@ class filemakerservice {
 		// value=valeur_de_recherche
 		// order=ordre_de_tri ("ASC" ou "DESC")
 		// reset=1 ou 0 (1 pour réinitialiser)
-		
+
 		// var_dump($data);
 		$model = $this->setCurrentModel($data['modele'], $data['base'], $data['server']);
 		// erreur ?
@@ -1147,17 +1147,17 @@ class filemakerservice {
 		// reset select
 		if(isset($data['reset'])) if($data['reset'] === "1") $this->resetAllSelect();
 
-		if(is_array($select['search'])) {
-			if(count($select['search']) > 0) foreach ($select['search'] as $key => $value) {
-				$this->FMfind->addFindCriterion($key, $value);
+		if(is_array($data['search'])) {
+			if(count($data['search']) > 0) foreach ($data['search'] as $key => $value) {
+				$this->FMfind->addFindCriterion($value['column'], $value['value']);
 			}
 		}
 
-		if(is_array($select['sort'])) {
-			if(count($select['sort']) > 0) foreach ($select['sort'] as $key => $value) {
-				if(strtoupper($value) === "ASC") $value = FILEMAKER_SORT_ASCEND;
-					else $value = FILEMAKER_SORT_DESCEND;
-				$this->FMfind->addSortRule($key, 1, $value);
+		if(is_array($data['sort'])) {
+			if(count($data['sort']) > 0) foreach ($data['sort'] as $key => $value) {
+				if(strtoupper($value['way']) === "ASC") $way = FILEMAKER_SORT_ASCEND;
+					else $way = FILEMAKER_SORT_DESCEND;
+				$this->FMfind->addSortRule($value['column'], $key, $way);
 			}
 		}
 
