@@ -36,7 +36,7 @@ class FileMaker_Error extends PEAR_Error
      * @var FileMaker
      * @access private
      */
-    var $_fm;
+    private $_fm;
 
     /**
      * Overloaded FileMaker_Error constructor.
@@ -46,7 +46,7 @@ class FileMaker_Error extends PEAR_Error
      * @param string $message Error message.
      * @param integer $code Error code.
      */
-    function FileMaker_Error(&$fm, $message = null, $code = null)
+    public static function FileMaker_Error(&$fm, $message = null, $code = null)
     {
         $this->_fm =& $fm;
         parent::PEAR_Error($message, $code);
@@ -62,7 +62,7 @@ class FileMaker_Error extends PEAR_Error
      * 
      * @return string Error message.
      */
-    function getMessage()
+    public static function getMessage()
     {
         if ($this->message === null && $this->getCode() !== null) {
             return $this->getErrorString();
@@ -80,7 +80,7 @@ class FileMaker_Error extends PEAR_Error
      *
      * @return string Error description.
      */
-    function getErrorString()
+    public static function getErrorString()
     {
         // Default to English.
         $lang = basename($this->_fm->getProperty('locale'));
@@ -110,7 +110,7 @@ class FileMaker_Error extends PEAR_Error
      * @return boolean FALSE, to indicate that this is an error from the 
      *         Web Publishing Engine.
      */
-    function isValidationError()
+    public static function isValidationError()
     {
         return false;
     }

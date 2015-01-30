@@ -2,43 +2,43 @@
   require_once dirname(__FILE__) . '/../Error/Validation.php';
  class FileMaker_Field_Implementation
 {
-  var $_layout;
- var $_name;
- var $_autoEntered = false;
- var $_global = false;
- var $_maxRepeat = 1;
- var $_validationMask = 0;
- var $_validationRules = array();
- var $_result;
- var $_type;
- var $_valueList = null;
- var $_styleType;
- var $_maxCharacters = 0;
- function FileMaker_Field_Implementation(&$Vc6140495)
+  public $_layout;
+ public $_name;
+ public $_autoEntered = false;
+ public $_global = false;
+ public $_maxRepeat = 1;
+ public $_validationMask = 0;
+ public $_validationRules = array();
+ public $_result;
+ public $_type;
+ public $_valueList = null;
+ public $_styleType;
+ public $_maxCharacters = 0;
+ public static function FileMaker_Field_Implementation(&$Vc6140495)
  {
  $this->_layout =& $Vc6140495;
 }
- function getName()
+ public static function getName()
  {
  return $this->_name;
 }
- function &getLayout()
+ public static function &getLayout()
  {
  return $this->_layout;
 }
- function isAutoEntered()
+ public static function isAutoEntered()
  {
  return $this->_autoEntered;
 }
- function isGlobal()
+ public static function isGlobal()
  {
  return $this->_global;
 }
- function getRepetitionCount()
+ public static function getRepetitionCount()
  {
  return $this->_maxRepeat;
 }
- function validate($V2063c160, $Vcb5e100e = null)
+ public static function validate($V2063c160, $Vcb5e100e = null)
  {
  $V1c0c74f6 = true;
 if ($Vcb5e100e === null) {
@@ -161,7 +161,7 @@ break;
 }
 }
 
-	 function getLocalValidationRules() 
+	 public static function getLocalValidationRules() 
 	{
  $V6b55d9ec = array ();
 foreach (array_keys($this->_validationRules) as $V981c1e7b) {
@@ -261,26 +261,26 @@ if (count($V9c28d32d) >= 4) {
  $Vcb5e100e->addError($this, $V981c1e7b, $V2063c160);
 }
 }
- function getValidationRules()
+ public static function getValidationRules()
  {
  return array_keys($this->_validationRules);
 }
- function getValidationMask()
+ public static function getValidationMask()
  {
  return $this->_validationMask;
 }
- function hasValidationRule($Ve289cc97)
+ public static function hasValidationRule($Ve289cc97)
  {
  return $Ve289cc97 & $this->_validationMask;
 }
- function describeValidationRule($Ve289cc97)
+ public static function describeValidationRule($Ve289cc97)
  {
  if (is_array($this->_validationRules[$Ve289cc97])) {
  return $this->_validationRules[$Ve289cc97];
 }
 return null;
 }
- function describeLocalValidationRules() 
+ public static function describeLocalValidationRules() 
 	{
  $V6b55d9ec = array ();
 foreach ($this->_validationRules as $V981c1e7b => $V1dee80c7) {
@@ -313,19 +313,19 @@ break;
 }
 return $V6b55d9ec;
 }
- function describeValidationRules()
+ public static function describeValidationRules()
  {
  return $this->_validationRules;
 }
- function getResult()
+ public static function getResult()
  {
  return $this->_result;
 }
- function getType()
+ public static function getType()
  {
  return $this->_type;
 }
- function getValueList($Vd33e904c = null)
+ public static function getValueList($Vd33e904c = null)
  {
  $Vb4a88417 = $this->_layout->loadExtendedInfo($Vd33e904c);
 if (FileMaker::isError($Vb4a88417)) {
@@ -333,7 +333,7 @@ if (FileMaker::isError($Vb4a88417)) {
 }
 return $this->_layout->getValueList($this->_valueList);
 }
- function getStyleType()
+ public static function getStyleType()
  {
  $Vb4a88417 = $this->_layout->loadExtendedInfo();
 if (FileMaker::isError($Vb4a88417)) {

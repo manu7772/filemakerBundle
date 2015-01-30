@@ -102,7 +102,7 @@ class FileMaker
      * @static
      *
      */
-    function isError($variable)
+    public static function isError($variable)
     {
         return is_a($variable, 'FileMaker_Error');
     }
@@ -113,7 +113,7 @@ class FileMaker
      * @return string API version.
      * @static
      */
-    function getAPIVersion()
+    public static function getAPIVersion()
     {
         return FileMaker_Implementation::getAPIVersion();
     }
@@ -124,7 +124,7 @@ class FileMaker
      * @return string Minimum FileMaker Server version.
      * @static
      */
-    function getMinServerVersion()
+    public static function getMinServerVersion()
     {
         return FileMaker_Implementation::getMinServerVersion();
     }
@@ -147,7 +147,7 @@ class FileMaker
      * @param string $username Account name to log into database.
      * @param string $password Password for account.
      */
-    function FileMaker($database = NULL, $hostspec = NULL, $username = NULL, $password = NULL)
+    public static function FileMaker($database = NULL, $hostspec = NULL, $username = NULL, $password = NULL)
     {
         $this->_impl = new FileMaker_Implementation($database, $hostspec, $username, $password);
     }
@@ -158,7 +158,7 @@ class FileMaker
      * @param string $prop Name of the property to set.
      * @param string $value Property's new value.
      */
-    function setProperty($prop, $value)
+    public static function setProperty($prop, $value)
     {
         $this->_impl->setProperty($prop, $value);
     }
@@ -170,7 +170,7 @@ class FileMaker
      *
      * @return string Property's current value.
      */
-    function getProperty($prop)
+    public static function getProperty($prop)
     {
         return $this->_impl->getProperty($prop);
     }
@@ -183,7 +183,7 @@ class FileMaker
      *
      * @return array All current properties.
      */
-    function getProperties()
+    public static function getProperties()
     {
         return $this->_impl->getProperties();
     }
@@ -194,7 +194,7 @@ class FileMaker
      *
      * @param Log &$logger PEAR Log object.
      */
-    function setLogger(&$logger)
+    public static function setLogger(&$logger)
     {
         $this->_impl->setLogger($logger);
     }
@@ -210,7 +210,7 @@ class FileMaker
      *
      * @return FileMaker_Command_Add New Add command object.
      */
-    function &newAddCommand($layout, $values = array())
+    public static function &newAddCommand($layout, $values = array())
     {
         return $this->_impl->newAddCommand($layout, $values);
     }
@@ -228,7 +228,7 @@ class FileMaker
      *
      * @return FileMaker_Command_Edit New Edit command object.
      */
-    function &newEditCommand($layout, $recordId, $updatedValues = array())
+    public static function &newEditCommand($layout, $recordId, $updatedValues = array())
     {
         return $this->_impl->newEditCommand($layout, $recordId, $updatedValues);
     }
@@ -241,7 +241,7 @@ class FileMaker
      *
      * @return FileMaker_Command_Delete New Delete command object.
      */
-    function &newDeleteCommand($layout, $recordId)
+    public static function &newDeleteCommand($layout, $recordId)
     {
         return $this->_impl->newDeleteCommand($layout, $recordId);
     }
@@ -254,7 +254,7 @@ class FileMaker
      *
      * @return FileMaker_Command_Duplicate New Duplicate command object.
      */
-    function &newDuplicateCommand($layout, $recordId)
+    public static function &newDuplicateCommand($layout, $recordId)
     {
         return $this->_impl->newDuplicateCommand($layout, $recordId);
     }
@@ -266,7 +266,7 @@ class FileMaker
      *
      * @return FileMaker_Command_Find New Find command object.
      */
-    function &newFindCommand($layout)
+    public static function &newFindCommand($layout)
     {
         return $this->_impl->newFindCommand($layout);
     }
@@ -280,7 +280,7 @@ class FileMaker
      * @return FileMaker_Command_CompoundFind New Compound Find Set command 
      *         object.
      */
-    function &newCompoundFindCommand($layout)
+    public static function &newCompoundFindCommand($layout)
     {
         return $this->_impl->newCompoundFindCommand($layout);
     }
@@ -295,7 +295,7 @@ class FileMaker
      *
      * @return FileMaker_Command_FindRequest New Find Request command object.
      */
-    function &newFindRequest($layout)
+    public static function &newFindRequest($layout)
     {
         return $this->_impl->newFindRequest($layout);
     }
@@ -307,7 +307,7 @@ class FileMaker
      *
      * @return FileMaker_Command_FindAny New Find Any command object.
      */
-    function &newFindAnyCommand($layout)
+    public static function &newFindAnyCommand($layout)
     {
         return $this->_impl->newFindAnyCommand($layout);
     }
@@ -319,7 +319,7 @@ class FileMaker
      *
      * @return FileMaker_Command_FindAll New Find All command object.
      */
-    function &newFindAllCommand($layout)
+    public static function &newFindAllCommand($layout)
     {
         return $this->_impl->newFindAllCommand($layout);
     }
@@ -334,7 +334,7 @@ class FileMaker
      * @return FileMaker_Command_PerformScript New Perform Script command 
      *         object.
      */
-    function &newPerformScriptCommand($layout, $scriptName, $scriptParameters = null)
+    public static function &newPerformScriptCommand($layout, $scriptName, $scriptParameters = null)
     {
         return $this->_impl->newPerformScriptCommand($layout, $scriptName, $scriptParameters);
     }
@@ -354,7 +354,7 @@ class FileMaker
      *
      * @return FileMaker_Record New Record object.
      */
-    function &createRecord($layout, $fieldValues = array())
+    public static function &createRecord($layout, $fieldValues = array())
     {
         return $this->_impl->createRecord($layout, $fieldValues);
     }
@@ -369,7 +369,7 @@ class FileMaker
      *
      * @return FileMaker_Record|FileMaker_Error Record or Error object.
      */
-    function &getRecordById($layout, $recordId)
+    public static function &getRecordById($layout, $recordId)
     {
         return $this->_impl->getRecordById($layout, $recordId);
     }
@@ -381,7 +381,7 @@ class FileMaker
      *
      * @return FileMaker_Layout|FileMaker_Error Layout or Error object.
      */
-    function &getLayout($layout)
+    public static function &getLayout($layout)
     {
         return $this->_impl->getLayout($layout);
     }
@@ -393,7 +393,7 @@ class FileMaker
      *
      * @return array|FileMaker_Error List of database names or an Error object.
      */
-    function listDatabases()
+    public static function listDatabases()
     {
         return $this->_impl->listDatabases();
     }
@@ -405,7 +405,7 @@ class FileMaker
      *
      * @return array|FileMaker_Error List of script names or an Error object.
      */
-    function listScripts()
+    public static function listScripts()
     {
         return $this->_impl->listScripts();
     }
@@ -417,7 +417,7 @@ class FileMaker
      *
      * @return array|FileMaker_Error List of layout names or an Error object.
      */
-    function listLayouts()
+    public static function listLayouts()
     {
         return $this->_impl->listLayouts();
     }
@@ -444,7 +444,7 @@ class FileMaker
      *
      * @return string Raw field data|FileMaker_Error if remote container field.
      */
-    function getContainerData($url)
+    public static function getContainerData($url)
     {
         return $this->_impl->getContainerData($url);
     }
@@ -463,7 +463,7 @@ class FileMaker
      *
      * @return string Fully qualified URL to container field contents
      */
-    function getContainerDataURL($url)
+    public static function getContainerDataURL($url)
     {
         return $this->_impl->getContainerDataURL($url);
     }

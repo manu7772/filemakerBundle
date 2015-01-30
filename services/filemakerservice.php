@@ -4,11 +4,16 @@
 namespace filemakerBundle\services;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
+use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Symfony\Component\Security\Http\Event\InteractiveLoginEvent;
 
 class filemakerservice {
 
 	protected $container;						// ContainerInterface
 	protected $serviceSess;						// Session data
+	protected $attributeSess;					// Attributs de session
 	protected $sessionServiceNom;				// Nom des données en session
 
 	protected $DEVdata = array();				// Données de développement
@@ -55,6 +60,7 @@ class filemakerservice {
 	public function __construct(ContainerInterface $container) {
 		$this->container 			= $container;
 		$this->serviceSess 			= $this->container->get('request')->getSession();
+		$this->attributeSess		= $this->container->get("request")->attributes;
 		$this->sessionServiceNom	= "filemakerservice";
 		$this->sourceDescription 	= "fichier XML";
 		$this->FMbase_paramfile 	= __DIR__."/../../../../../app/config/parameters_fm.xml";
@@ -63,17 +69,57 @@ class filemakerservice {
 		$this->env = $this->container->get('kernel')->getEnvironment();
 		$this->DEVdata["Environnement"] = $this->env;
 		if($this->env === "prod") $this->DEV = false;
-		$this->echoDev("environnement : ".$this->env);
-		// initialisation
-		$this->initializeService();
+		$this->DEV = true;
+		//
+		// $this->echoDev("environnement : ".$this->env);
+		if($this->attributeSess->get('_controller') !== null) {
+			$add = $this->attributeSess->get('_request_type');
+			$this->echoDev('<h3>Loading Construteur filemakerservice -> '.$add.' <small>(environnement : '.$this->env.')</small></h3>');
+			if(count($this->serviceSess->get($this->sessionServiceNom)) > 0) {
+				foreach($this->serviceSess->get($this->sessionServiceNom) as $name => $data) {
+					$this->echoDev('<h4>'.$name.'</h4>');
+					foreach ($data as $name2 => $data2) {
+						if(!is_array($data2) && !is_object($data2)) $this->echoDev("- ".$name2." = ".$data2);
+						if(is_array($data2)) $this->echoDev("- ".$name2." = array(".count($data2).")");
+					}
+				}
+			}
+		}  else {
 
+		}
+		// initialisation
+		// $this->initializeService();
 		// TEST
 		// foreach ($this->getListOfServersNames() as $server) {
 		// 	$this->echoDev("<h3>Bases du serveur ".$server."</h3>", "");
 		// 	$this->vardumpDev($this->getListOfBases($server));
 		// }
 		// $this->affErrors();
+		// $this->echoDev("<pre>");
+		// var_dump($this->serviceSess->get($this->sessionServiceNom));
+		// $this->echoDev("</pre>");
 		return $this;
+	}
+
+	public function load_fmservice(FilterControllerEvent $event) {
+		// $event->getRequest()->attributes->set('_request_type', $event->getRequestType());
+		// $this->__construct($event);
+		if(HttpKernelInterface::MASTER_REQUEST === $event->getRequestType()) { // SUB_REQUEST ou MASTER_REQUEST
+			$this->container 			= $event;
+			$this->serviceSess 			= $this->container->getRequest()->getSession();
+			$this->attributeSess		= $this->container->getRequest()->attributes;
+			$this->sessionServiceNom	= "filemakerservice";
+			$this->sourceDescription 	= "fichier XML";
+			$this->FMbase_paramfile 	= __DIR__."/../../../../../app/config/parameters_fm.xml";
+			require_once(__DIR__."/../FM/FileMaker.php");
+			// init
+			$this->initializeService();
+			$this->container->getRequest()->attributes->set('_request_type', "Requête PRINCIPALE");
+			$this->echoDev('<h3>Loading filemakerservice from LISTENER…<small>(Requête PRINCIPALE)</small></h3>');
+		} else {
+			$this->container->getRequest()->attributes->set('_request_type', "Requête secondaire");
+			$this->echoDev('<h4>Loading filemakerservice from LISTENER…<small>(Requête secondaire)</small></h4>');
+		}
 	}
 
 	public function __destruct() {
@@ -176,9 +222,10 @@ class filemakerservice {
 			$this->getFilemakerserviceDataInSession(null, true);
 			$this->DEVdata["Chargement"] = "Chargement depuis session";
 		}
+		$this->echoDev("<h4><i>- Initialise : ".$this->DEVdata["Chargement"]."</i></h4>");
 		// attribue le premier serveur par défaut s'il n'y en a pas eu
 		if($defaultSERVER === $this->defaultValueOFF) $this->SERVER[$firstServer]['default'] = $this->defaultValueON;
-		$this->vardumpDev($this->SERVER, "Liste des serveurs/bases mémorisées");
+		// $this->vardumpDev($this->SERVER, "Liste des serveurs/bases mémorisées");
 		return $this->auMoinsUneBaseValide();
 	}
 
@@ -1343,14 +1390,14 @@ class filemakerservice {
 	 */
 	protected function affErrors() {
 		if($this->DEV === true) {
-			echo("<br /><br /><div class='container'><table class='table table-bordered table-hover table-condensed'>");
+			$this->echoDev("<br /><br /><div class='container'><table class='table table-bordered table-hover table-condensed'>");
 			foreach ($this->globalErrors as $key => $error) {
-				echo("	<tr>");
-				echo("		<td>".$error[0]."</td>");
-				echo("		<td>".$error[1]->format("H:i:s - Y/m/d")."</td>");
-				echo("	</tr>");
+				$this->echoDev("	<tr>");
+				$this->echoDev("		<td>".$error[0]."</td>");
+				$this->echoDev("		<td>".$error[1]->format("H:i:s - Y/m/d")."</td>");
+				$this->echoDev("	</tr>");
 			}
-			echo("</table></div><br />");
+			$this->echoDev("</table></div><br />");
 		}
 	}
 
@@ -1360,11 +1407,11 @@ class filemakerservice {
 	protected function vardumpDev($data, $titre = null) {
 		if($this->DEV === true) {
 			if($titre !== null && is_string($titre) && strlen($titre) > 0) {
-				echo('<h2>'.$titre.'</h2>');
+				$this->echoDev('<h2>'.$titre.'</h2>');
 			}
-			echo("<pre>");
+			$this->echoDev("<pre>");
 			var_dump($data);
-			echo("</pre>");
+			$this->echoDev("</pre>");
 		}
 	}
 
@@ -1372,6 +1419,8 @@ class filemakerservice {
 	 * DEV : affiche $texte
 	 */
 	protected function echoDev($texte, $end = "<br>") {
+		$noend = array("<h", "<p", "<d");
+		if(in_array(strtolower(substr($texte, 0, 2)), $noend)) $end = "";
 		if($this->DEV === true) {
 			echo(ucfirst($texte.$end));
 		}
