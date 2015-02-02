@@ -9,12 +9,25 @@ use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Security\Http\Event\InteractiveLoginEvent;
 
+define('SYMB_LIST1', " -&gt; ");
+define('SYMB_COLOR9', "#999");
+define('SYMB_COLOR_ERROR', "red");
+
 class filemakerservice {
 
 	protected $container;						// ContainerInterface
 	protected $serviceSess;						// Session data
 	protected $attributeSess;					// Attributs de session
 	protected $sessionServiceNom;				// Nom des données en session
+
+	// état du service ON/OFF
+	protected $FM_Operationnel = false;			// état du service (boolean)
+
+	// Données mises en attribut de session
+	protected $FMdataOK = '_fm_data_ok';		// nom de l'attribut d'état du service
+	protected $requestType = '_request_type';	// nom de l'attribut de type de la requête
+	protected $DEVsessionDataName = "filemaker_DEV"; //	nom des données de session pour DEV
+	protected $putSessionData = true;			// activeur/désactiveur de mise en session des données
 
 	protected $DEVdata = array();				// Données de développement
 
@@ -69,40 +82,18 @@ class filemakerservice {
 		$this->env = $this->container->get('kernel')->getEnvironment();
 		$this->DEVdata["Environnement"] = $this->env;
 		if($this->env === "prod") $this->DEV = false;
-		$this->DEV = true;
+		// $this->DEV = true;
 		//
-		// $this->echoDev("environnement : ".$this->env);
-		if($this->attributeSess->get('_controller') !== null) {
-			$add = $this->attributeSess->get('_request_type');
-			$this->echoDev('<h3>Loading Construteur filemakerservice -> '.$add.' <small>(environnement : '.$this->env.')</small></h3>');
-			if(count($this->serviceSess->get($this->sessionServiceNom)) > 0) {
-				foreach($this->serviceSess->get($this->sessionServiceNom) as $name => $data) {
-					$this->echoDev('<h4>'.$name.'</h4>');
-					foreach ($data as $name2 => $data2) {
-						if(!is_array($data2) && !is_object($data2)) $this->echoDev("- ".$name2." = ".$data2);
-						if(is_array($data2)) $this->echoDev("- ".$name2." = array(".count($data2).")");
-					}
-				}
-			}
-		}  else {
+		// switch ON/OFF service
+		$this->FM_Operationnel = $this->attributeSess->get($this->FMdataOK);
+		if($this->FM_Operationnel === true) $this->echoDev("<h3>CONSTRUCTEUR =&gt; statut ".$this->getName()." : actif</h3>", null, "green");
+			else $this->echoDev("<h3>CONSTRUCTEUR =&gt; statut ".$this->getName()." : inactif</h3>", null, "red");
 
-		}
-		// initialisation
-		// $this->initializeService();
-		// TEST
-		// foreach ($this->getListOfServersNames() as $server) {
-		// 	$this->echoDev("<h3>Bases du serveur ".$server."</h3>", "");
-		// 	$this->vardumpDev($this->getListOfBases($server));
-		// }
-		// $this->affErrors();
-		// $this->echoDev("<pre>");
-		// var_dump($this->serviceSess->get($this->sessionServiceNom));
-		// $this->echoDev("</pre>");
 		return $this;
 	}
 
 	public function load_fmservice(FilterControllerEvent $event) {
-		// $event->getRequest()->attributes->set('_request_type', $event->getRequestType());
+		// $event->getRequest()->attributes->set($this->requestType, $event->getRequestType());
 		// $this->__construct($event);
 		if(HttpKernelInterface::MASTER_REQUEST === $event->getRequestType()) { // SUB_REQUEST ou MASTER_REQUEST
 			$this->container 			= $event;
@@ -111,15 +102,22 @@ class filemakerservice {
 			$this->sessionServiceNom	= "filemakerservice";
 			$this->sourceDescription 	= "fichier XML";
 			$this->FMbase_paramfile 	= __DIR__."/../../../../../app/config/parameters_fm.xml";
+
+			$this->attributeSess->set($this->requestType, "Requête PRINCIPALE");
+			$this->echoDev('<h3>LISTENER =&gt; Loading filemakerservice <small>(Requête PRINCIPALE)</small></h3>', null, "green");
+
 			require_once(__DIR__."/../FM/FileMaker.php");
-			// init
-			$this->initializeService();
-			$this->container->getRequest()->attributes->set('_request_type', "Requête PRINCIPALE");
-			$this->echoDev('<h3>Loading filemakerservice from LISTENER…<small>(Requête PRINCIPALE)</small></h3>');
+			// init & information en attributs de session (dans "_fm_data_ok")
+			$this->echoDev('Avant analyse…');
+			$this->FM_Operationnel = $this->initializeService();
+			$this->echoDev('Après analyse…');
+			$this->container->getRequest()->attributes->set($this->FMdataOK, $this->FM_Operationnel);
 		} else {
-			$this->container->getRequest()->attributes->set('_request_type', "Requête secondaire");
-			$this->echoDev('<h4>Loading filemakerservice from LISTENER…<small>(Requête secondaire)</small></h4>');
+			$this->container->getRequest()->attributes->set($this->requestType, "Requête secondaire");
+			$this->echoDev('<h4>LISTENER =&gt; Loading filemakerservice <small>(Requête secondaire)</small></h4>', null, SYMB_COLOR9);
+			$this->echoDev('<p> --&gt; Aucune action</p>', null, "#aaa");
 		}
+		$this->vardumpDev($this->DEVdata["Chargement"], 'Résultat de l\'analyse : (DEVdata["Chargement"])');
 	}
 
 	public function __destruct() {
@@ -139,13 +137,18 @@ class filemakerservice {
 	 * @return boolean (true si succès)
 	 */
 	protected function initializeService($file = null, $forceLoad = false) {
+		// désactive la mise en session des données
+		$this->disablePutSessionData();
 		// charge les paramètres de sélection généraux
-		$this->getFromSessionSelects();
+		$test = $this->getFromSessionSelects();
+		$this->vardumpDev($test, "Données de paramètres récupérés de session");
 		//
 		if($this->isDataInSession() === false || $forceLoad === true) {
 			$this->DEVdata["Chargement"] = "Scan servers & databases";
 			if($file === null) $file = $this->FMbase_paramfile;
 			if(file_exists($file)) {
+				// $this->echoDev(SYMB_LIST1."", null, SYMB_COLOR9);
+				$this->echoDev(SYMB_LIST1.$this->sourceDescription." trouvé : ".$file, null, SYMB_COLOR9);
 				$this->SERVER = array();
 				$xmldata = simplexml_load_file($file);
 				// $this->vardumpDev($xmldata, "Données brutes ".$this->sourceDescription);
@@ -155,8 +158,10 @@ class filemakerservice {
 				$firstServer = null;
 				// SERVEURS : début
 				if(count($serv) > 0) {
+					// Descriptions de serveurs trouvées
 					foreach($serv as $ssh) {
 						$attr = $ssh->attributes();
+						$this->echoDev(SYMB_LIST1."Vérification de serveur ".trim($attr['ip']), null, SYMB_COLOR9);
 						if(isset($attr['ip'])) {
 							$ipp = trim($attr['ip']);
 							// Si nom n'existe pas on lui dont le nom d'Ip
@@ -182,6 +187,7 @@ class filemakerservice {
 									$defaultSERVER 					= $this->defaultValueON;
 									$this->SERVER[$nom]['default'] 	= $this->defaultValueON;
 									$this->SERVER[$nom]['current'] 	= $this->defaultValueON;
+									$this->echoDev(SYMB_LIST1."Serveur par défaut : ".$nom, null, "#999;");
 								}
 							}
 							// recherche de statut
@@ -190,11 +196,14 @@ class filemakerservice {
 								// Serveur non accessible
 								$this->SERVER[$nom]['statut'] = false;
 								$this->SERVER[$nom]['errors'][] = $listDBServer;
+								$this->echoDev($listDBServer);
 							} else {
+								$this->vardumpDev($listDBServer, "Bases observées (listDBServer) sur le serveur <i style='color:#666;'>".$nom."</i>");
 								$this->SERVER[$nom]['nom'] = $nom;
 								$this->SERVER[$nom]['statut'] = true;
 								// databases en description
 								$this->SERVER[$nom]['databases'] = $this->getAndTestBASES($ssh->xpath("FMBASE"), $nom, $listDBServer);
+								$this->vardumpDev($this->SERVER[$nom]['databases'], "Test des bases de ".$nom);
 								// Ajout des paramètres de connexion aux bases
 								$this->getAndMakeConnexions($ssh, $nom);
 								// Ajout des modèles
@@ -206,25 +215,30 @@ class filemakerservice {
 							}
 						}
 					}
+					// réactive la mise en session des données
+					$this->enablePutSessionData();
 					// Sauvegarde en session
+					$this->echoDev("<h4><i>- Mise en session des données</i></h4>");
 					$this->putDataInSession();
 				} else {
 					$this->SERVER[$this->defaultErrSERVERname] = $this->defaultErrSERVER;
 					// $sdb = $this->getListOfSrvDatabases($this->SERVER[$this->defaultErrSERVERname]);
 					$this->addError('Description de serveur non trouvée.<br>Selection du serveur par défaut : '.$this->defaultErrSERVER." (\"".$this->defaultErrSERVERname."\")");
+					$this->echoDev(SYMB_LIST1.'Description de serveur non trouvée.<br>Selection du serveur par défaut : '.$this->defaultErrSERVER." (\"".$this->defaultErrSERVERname."\")", null, SYMB_COLOR9);
 				}
 			} else {
 				$this->SERVER[$this->defaultErrSERVERname] = $this->defaultErrSERVER;
 				$this->addError($this->sourceDescription." non trouvé. Chargement des données de serveurs impossible");
+				$this->echoDev(SYMB_LIST1.$this->sourceDescription." non trouvé. Chargement des données de serveurs impossible", null, SYMB_COLOR9);
 			}
 		} else {
 			// chargement des données en session
 			$this->getFilemakerserviceDataInSession(null, true);
 			$this->DEVdata["Chargement"] = "Chargement depuis session";
 		}
-		$this->echoDev("<h4><i>- Initialise : ".$this->DEVdata["Chargement"]."</i></h4>");
+		$this->echoDev("<h4><i> -&gt; Initialise : ".$this->DEVdata["Chargement"]."</i></h4>", null, SYMB_COLOR9);
 		// attribue le premier serveur par défaut s'il n'y en a pas eu
-		if($defaultSERVER === $this->defaultValueOFF) $this->SERVER[$firstServer]['default'] = $this->defaultValueON;
+		if($this->defaultSERVER === $this->defaultValueOFF) $this->SERVER[$firstServer]['default'] = $this->defaultValueON;
 		// $this->vardumpDev($this->SERVER, "Liste des serveurs/bases mémorisées");
 		return $this->auMoinsUneBaseValide();
 	}
@@ -236,19 +250,37 @@ class filemakerservice {
 	 * @return filemakerservice
 	 */
 	protected function putDataInSession($data = null, $nom = null) {
-		if($data === null) $data = $this->SERVER;
-		if($nom === null) $nom = $this->sessionServiceNom;
-		$this->serviceSess->set($nom, $data);
-
-		// DEV
-		$this->DEVdata['Serveur courant'] = $this->getCurrentSERVER();
-		$this->DEVdata['Base courante'] = $this->getCurrentBASE();
-		$this->DEVdata['Ip courant'] = $this->getCurrentIP();
-		$this->DEVdata['SAdmin login'] = $this->getCurrentSAdminLogin();
-		$this->DEVdata['SAdmin password'] = $this->getCurrentSAdminPasse();
-		$this->serviceSess->set("filemaker_DEV", $this->DEVdata);
+		if($this->putSessionData === true) {
+			if($data === null) $data = $this->SERVER;
+			if($nom === null) $nom = $this->sessionServiceNom;
+			$this->serviceSess->set($nom, $data);
+	
+			// DEV
+			$this->DEVdata['Serveur courant'] = $this->getCurrentSERVER();
+			// $this->DEVdata['Base courante'] = $this->getCurrentBASE();
+			$this->DEVdata['Ip courant'] = $this->getCurrentIP();
+			$this->DEVdata['SAdmin login'] = $this->getCurrentSAdminLogin();
+			$this->DEVdata['SAdmin password'] = $this->getCurrentSAdminPasse();
+			$this->DEVdata['Version API FM'] = $this->getAPIVersion();
+			$this->serviceSess->set($this->DEVsessionDataName, $this->DEVdata);
+			$this->vardumpDev($this->DEVdata, "Enregistrement des données de développement (DEVdata)");
+		}
 
 		return $this;
+	}
+
+	/**
+	 * Réactive la mise en session des données
+	 */
+	protected function disablePutSessionData() {
+		$this->putSessionData = false;
+	}
+
+	/**
+	 * Réactive la mise en session des données
+	 */
+	protected function enablePutSessionData() {
+		$this->putSessionData = true;
 	}
 
 	/**
@@ -262,26 +294,38 @@ class filemakerservice {
 			else return false;
 	}
 
+	/**
+	 * Récupère et vérifie les modèles de toutes les bases d'un serveur $SERVnom
+	 * @param string $SERVnom - nom du serveur
+	 * @return filemakerservice
+	 */
 	protected function getAntTestModels($SERVnom) {
 		$SERVnom = $this->getServerByNom($SERVnom);
 		if($SERVnom !== false) {
 			// $this->echoDev('Vérification des modèles pour '.$SERVnom);
 			foreach($this->SERVER[$SERVnom]['databases']['valids'] as $BASEnom => $base) {
-				$this->echoDev("Vérification des modèles pour ".$BASEnom." (".$SERVnom.").");
+				$this->echoDev(SYMB_LIST1."Vérification des modèles pour ".$BASEnom." (".$SERVnom.").", null, SYMB_COLOR9);
 				$this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'] = $this->getLayouts($SERVnom, $BASEnom, true);
 			}
 		}
+		return $this;
 	}
 
+	/**
+	 * Récupère et vérifie les scripts de toutes les bases d'un serveur $SERVnom
+	 * @param string $SERVnom - nom du serveur
+	 * @return filemakerservice
+	 */
 	protected function getAntTestScripts($SERVnom) {
 		$SERVnom = $this->getServerByNom($SERVnom);
 		if($SERVnom !== false) {
 			// $this->echoDev('Vérification des modèles pour '.$SERVnom);
 			foreach($this->SERVER[$SERVnom]['databases']['valids'] as $BASEnom => $base) {
-				$this->echoDev("Vérification des scripts pour ".$BASEnom." (".$SERVnom.").");
+				$this->echoDev(SYMB_LIST1."Vérification des scripts pour ".$BASEnom." (".$SERVnom.").", null, SYMB_COLOR9);
 				$this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['scripts'] = $this->getScripts($SERVnom, $BASEnom, true);
 			}
 		}
+		return $this;
 	}
 
 	/**
@@ -299,7 +343,7 @@ class filemakerservice {
 				foreach($base->xpath("user") as $user) {
 					$userAttr = $user->attributes();
 					$USERnom = trim($userAttr['username']);
-					$this->echoDev("Base ".$BASEnom." = User ".$USERnom);
+					$this->echoDev(SYMB_LIST1."Base ".$BASEnom." = User ".$USERnom, null, SYMB_COLOR9);
 					// vérifie si les paramètres requis sont présents
 					$missingRequired = false;
 					foreach($this->getAttribsFromUser() as $nat => $vat) {
@@ -310,7 +354,7 @@ class filemakerservice {
 							else $userStatut = "users";
 						// Enregistrement en database
 						foreach ($userAttr as $nomatt => $valatt) {
-							$this->echoDev("Attribut user ".$USERnom." : ".trim($nomatt)." = ".trim($valatt));
+							$this->echoDev(SYMB_LIST1."Attribut user ".$USERnom." : ".trim($nomatt)." = ".trim($valatt), null, SYMB_COLOR9);
 							$this->SERVER[$SERVnom]["databases"]["valids"][$BASEnom][$userStatut][$USERnom][$nomatt] = trim($valatt);
 						}
 					}
@@ -323,7 +367,7 @@ class filemakerservice {
 					$this->SERVER[$SERVnom]["databases"]["unvalids"][$BASEnom]["errors"][] = $err;
 					$this->SERVER[$SERVnom]["databases"]["unvalids"][$BASEnom]["statut"] = false;
 					unset($this->SERVER[$SERVnom]["databases"]["valids"][$BASEnom]);
-					$this->echoDev($err);
+					$this->echoDev(SYMB_LIST1.$err, null, SYMB_COLOR_ERROR);
 					$this->addError($err);
 				}
 			}
@@ -373,8 +417,8 @@ class filemakerservice {
 								$access['unvalids'][$nomBASEbcl]['errors'] = array();
 								$access['unvalids'][$nomBASEbcl]['errors'][] = $message;
 								$access['unvalids'][$nomBASEbcl]['statut'] = false;
-								$this->echoDev($message);
 								$this->addError($message);
+								$this->echoDev(SYMB_LIST1.$message, null, SYMB_COLOR9);
 								break(1);
 							} else {
 								// élément présent
@@ -382,14 +426,16 @@ class filemakerservice {
 								// exception pour default="default"
 								if($nom == "default") {
 									if($defaultBASE === false && $attbcl == "default") {
-										$this->echoDev("base par défaut / courante pour ".$SERVnom." : ".$nomBASEbcl);
 										$defaultBASE = true;
 										$access['valids'][$nomBASEbcl]["default"] = $this->defaultValueON;
 										$access['valids'][$nomBASEbcl]["current"] = $this->defaultValueON;
+										$this->echoDev(SYMB_LIST1."Base par défaut trouvée : ".$nomBASEbcl." (".$SERVnom.")", null, SYMB_COLOR9);
 										// définit la base par défaut
 										$this->setDefaultBASE($nomBASEbcl, $SERVnom);
+										$this->echoDev(SYMB_LIST1."Base par défaut définie : ".$nomBASEbcl." (".$SERVnom.")", null, SYMB_COLOR9);
 										// définit la base courante aussi, du coup
 										$this->setCurrentBASE($nomBASEbcl, $SERVnom);
+										$this->echoDev(SYMB_LIST1."Base par courante définie : ".$nomBASEbcl." (".$SERVnom.")", null, SYMB_COLOR9);
 									} else {
 										$access['valids'][$nomBASEbcl]["default"] = $this->defaultValueOFF;
 										$access['valids'][$nomBASEbcl]["current"] = $this->defaultValueOFF;
@@ -413,6 +459,7 @@ class filemakerservice {
 						$access['unvalids'][$nomBASEbcl]['errors'][] = $message;
 						$access['unvalids'][$nomBASEbcl]['statut'] = false;
 						$this->addError($message);
+						$this->echoDev(SYMB_LIST1.$message, null, SYMB_COLOR9);
 					}
 				}
 			}
@@ -425,6 +472,7 @@ class filemakerservice {
 			// 	$access['valids'][$firstBase]["default"] = $this->defaultValueON;
 			// 	$this->echoDev("base par défaut pour ".$SERVnom." : ".$firstBase);
 			// }
+			$this->vardumpDev($access, "Retour analyse test des bases de ".$SERVnom);
 			return $access;
 		} else {
 			return false;
@@ -825,7 +873,7 @@ class filemakerservice {
 	protected function getListOfTypesOfDatabases() {
 		$types = array();
 		foreach($this->SERVER as $SERVnom => $server) {
-			foreach($server['databases'] as $nomtyp => $typDB) {
+			if(isset($server['databases'])) foreach($server['databases'] as $nomtyp => $typDB) {
 				if(!in_array($nomtyp, $types)) $types[] = $nomtyp;
 			}
 		}
@@ -848,7 +896,7 @@ class filemakerservice {
 	protected function getCurrentSAdminLogin() {
 		$CS = $this->getCurrentSERVER();
 		$CB = $this->getCurrentBASE();
-		foreach ($this->SERVER[$CS]['databases']['valids'][$CB]['sadmin'] as $nom => $user) {
+		if(isset($this->SERVER[$CS]['databases'])) foreach ($this->SERVER[$CS]['databases']['valids'][$CB]['sadmin'] as $nom => $user) {
 			if(trim($user['superadmin']) === 'default') return $user['login'];
 		}
 		return false;
@@ -861,7 +909,7 @@ class filemakerservice {
 	protected function getCurrentSAdminPasse() {
 		$CS = $this->getCurrentSERVER();
 		$CB = $this->getCurrentBASE();
-		foreach ($this->SERVER[$CS]['databases']['valids'][$CB]['sadmin'] as $nom => $user) {
+		if(isset($this->SERVER[$CS]['databases'])) foreach ($this->SERVER[$CS]['databases']['valids'][$CB]['sadmin'] as $nom => $user) {
 			if(trim($user['superadmin']) === 'default') return $user['passe'];
 		}
 		return false;
@@ -936,7 +984,7 @@ class filemakerservice {
 	 * @return string
 	 */
 	public function getName() {
-		return "filemakerservice";
+		return $this->sessionServiceNom;
 	}
 
 	/**
@@ -968,7 +1016,7 @@ class filemakerservice {
 	 */
 	public function getCurrentBASE($SERVnom = null) {
 		if($SERVnom === null) $SERVnom = $this->getCurrentSERVER();
-		foreach($this->SERVER[$SERVnom]['databases']['valids'] as $nom => $base) {
+		if(isset($this->SERVER[$SERVnom]['databases'])) foreach($this->SERVER[$SERVnom]['databases']['valids'] as $nom => $base) {
 			if($base['current'] === $this->defaultValueON) return $nom;
 		}
 		return false;
@@ -981,7 +1029,7 @@ class filemakerservice {
 	 */
 	public function getDefaultBASE($SERVnom = null) {
 		if($SERVnom === null) $SERVnom = $this->getCurrentSERVER();
-		foreach($this->SERVER[$SERVnom]['databases']['valids'] as $nom => $base) {
+		if(isset($this->SERVER[$SERVnom]['databases'])) foreach($this->SERVER[$SERVnom]['databases']['valids'] as $nom => $base) {
 			if($base['default'] === $this->defaultValueON) return $nom;
 		}
 		return false;
@@ -1090,14 +1138,14 @@ class filemakerservice {
 			}
 		}
 		$SERVnom = $this->getServerByNom($SERVnom);
-		if($SERVnom !== false) {
+		if($SERVnom !== false && isset($this->SERVER[$SERVnom]['databases'])) {
 			if(count($this->SERVER[$SERVnom]['databases'][$statut]) < 1) return false;
 			$list = array();
 			foreach($this->SERVER[$SERVnom]['databases'][$statut] as $nom => $base) {
 				$list[] = $nom;
 			}
 			return $list;
-		} else return false;
+		} else return array();
 	}
 
 	/**
@@ -1129,7 +1177,9 @@ class filemakerservice {
 			}
 		} else {
 			// Chargement depuis $SERVER
-			$records = $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['scripts'];
+			if(isset($this->SERVER[$SERVnom]['databases'])) {
+				$records = $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['scripts'];
+			} else $records = array();
 			if(count($records) < 1) $records = "Aucun script trouvé.";
 		}
 		return $records;
@@ -1161,7 +1211,9 @@ class filemakerservice {
 			}
 		} else {
 			// Chargement depuis $SERVER
-			$records = $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'];
+			if(isset($this->SERVER[$SERVnom]['databases'])) {
+				$records = $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'];
+			} else $records = array();
 			if(count($records) < 1) $records = "Aucun modèle trouvé.";
 		}
 		return $records;
@@ -1347,18 +1399,19 @@ class filemakerservice {
 
 	/**
 	 * Ajoute une erreur / insère la date/heure automatiquement
-	 * @param array/string
+	 * @param string $message --> message d'erreur
 	 * @return filemakerservice
 	 */
 	protected function addError($message) {
-		return $this->addErrors($message);
+		if(!is_string($message)) return false;
+		return $this->addErrors(array($message));
 	}
 
 
 	/**
-	 * Ajoute une erreur / insère la date/heure automatiquement
-	 * @param array/string
-	 * @param boolean $putFlash / insère également en données flashbag si true (par défaut)
+	 * Ajoute une erreur & insère la date/heure automatiquement
+	 * @param array $messages --> array de messages d'erreur
+	 * @param boolean $putFlash --> insère également en données flashbag si true (true par défaut)
 	 * @return filemakerservice
 	 */
 	protected function addErrors($messages, $putFlash = true) {
@@ -1371,7 +1424,7 @@ class filemakerservice {
 			$message = ucfirst($message);
 			$this->globalErrors[] = array($message, $time);
 			if($putFlash === true) {
-				$this->container->get("session")->getFlashBag()->add("FMerror", $message." (".$time->format("H:i:s - d/m/Y").")");
+				$this->serviceSess->getFlashBag()->add("FMerror", $message." (".$time->format("H:i:s - d/m/Y").")");
 			}
 		}
 		return $this;
@@ -1390,39 +1443,101 @@ class filemakerservice {
 	 */
 	protected function affErrors() {
 		if($this->DEV === true) {
-			$this->echoDev("<br /><br /><div class='container'><table class='table table-bordered table-hover table-condensed'>");
+			echo("<br /><div class='container'><table class='table table-bordered table-hover table-condensed'>");
 			foreach ($this->globalErrors as $key => $error) {
-				$this->echoDev("	<tr>");
-				$this->echoDev("		<td>".$error[0]."</td>");
-				$this->echoDev("		<td>".$error[1]->format("H:i:s - Y/m/d")."</td>");
-				$this->echoDev("	</tr>");
+				echo("	<tr>");
+				echo("		<td>".$error[0]."</td>");
+				echo("		<td>".$error[1]->format("H:i:s - Y/m/d")."</td>");
+				echo("	</tr>");
 			}
-			$this->echoDev("</table></div><br />");
+			echo("</table></div><br /><br />");
 		}
 	}
 
+
 	/**
-	 * DEV : affiche $data
+	 * affiche le contenu de $data (récursif)
+	 * @param mixed $data
+	 */
+	protected function affPreData($data, $nom = null) {
+		$style = " style='margin:4px 0px 8px 20px;padding-left:4px;border-left:1px solid #666;'";
+		$istyle = " style='color:#999;font-style:italic;'";
+		if(is_string($nom)) {
+			$affNom = " [\"".$nom."\"]";
+		} else if(is_int($nom)) {
+			$affNom = " [".$nom."]";
+		} else {
+			$affNom = "";
+			$nom = null;
+		}
+		switch (strtolower(gettype($data))) {
+			case 'array':
+				echo("<div".$style.">");
+				echo("<i".$istyle.">".gettype($data)."</i> (".count($data).")".$affNom);
+				foreach($data as $nom2 => $dat2) $this->affPreData($dat2, $nom2);
+				echo("</div>");
+				break;
+			case 'string':
+			case 'integer':
+				echo("<div".$style.">");
+				echo($affNom." = <i".$istyle.">".gettype($data)."</i> \"".$data."\"");
+				echo("</div>");
+				break;
+			case 'boolean':
+				echo("<div".$style.">");
+				if($data === true) $databis = 'true';
+					else $databis = 'false';
+				echo($affNom." = <i".$istyle.">".gettype($data)."</i> ".$databis);
+				echo("</div>");
+				break;
+			case 'null':
+				echo("<div".$style.">");
+				echo(gettype($data));
+				echo("</div>");
+				break;
+			default:
+				echo("<div".$style.">");
+				echo(gettype($data).$affNom);
+				echo("</div>");
+				break;
+		}
+	}
+
+
+	/**
+	 * DEV : affiche $data (uniquement en environnement DEV)
+	 * @param mixed $data
+	 * @param string $titre = null
 	 */
 	protected function vardumpDev($data, $titre = null) {
 		if($this->DEV === true) {
+			echo("<div style='border:1px dotted #666;padding:4px 8px;margin:8px 24px;'>");
 			if($titre !== null && is_string($titre) && strlen($titre) > 0) {
-				$this->echoDev('<h2>'.$titre.'</h2>');
+				echo('<h3 style="margin-top:0px;padding-top:0px;border-bottom:1px dotted #999;margin-bottom:4px;">'.$titre.'</h3>');
 			}
-			$this->echoDev("<pre>");
-			var_dump($data);
-			$this->echoDev("</pre>");
+			$this->affPreData($data);
+			echo("</div>");
 		}
 	}
 
 	/**
-	 * DEV : affiche $texte
+	 * DEV : affiche $texte (uniquement en environnement DEV)
+	 * @param string $texte
+	 * @param string $end = "<br>" --> texte de retour à la ligne
 	 */
-	protected function echoDev($texte, $end = "<br>") {
+	protected function echoDev($texte, $end = "<br>", $color = null) {
+		if($end === null) $end = "<br>";
+		if(is_string($color) && strlen($color) > 0) {
+			$col_begin = '<span style="color:'.$color.';">';
+			$col_end = '</span>';
+		} else {
+			$col_begin = '';
+			$col_end = '';
+		}
 		$noend = array("<h", "<p", "<d");
 		if(in_array(strtolower(substr($texte, 0, 2)), $noend)) $end = "";
 		if($this->DEV === true) {
-			echo(ucfirst($texte.$end));
+			echo($col_begin.$texte.$col_end.$end);
 		}
 	}
 

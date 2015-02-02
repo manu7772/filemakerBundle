@@ -36,7 +36,7 @@ class FileMaker_Layout
      * @var FileMaker_Layout_Implementation
      * @access private
      */
-    private $_impl;
+    var $_impl;
 
     /**
      * Layout object constructor.
@@ -262,7 +262,7 @@ class FileMaker_Layout
      * @return boolean|FileMaker_Error TRUE, if successful. Otherwise, an 
      *         Error object.
      */
-    private function loadExtendedInfo($recid = null)
+    function loadExtendedInfo($recid = null)
     {
         return $this->_impl->loadExtendedInfo($recid);
     }

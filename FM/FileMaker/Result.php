@@ -33,7 +33,7 @@ class FileMaker_Result
      * @var FileMaker_Result_Implementation
      * @access private
      */
-    private $_impl;
+    var $_impl;
 
     /**
      * Result object constructor.

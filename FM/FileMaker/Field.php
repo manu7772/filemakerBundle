@@ -34,7 +34,7 @@ class FileMaker_Field
      * @var FileMaker_Layout_Implementation
      * @access private
      */
-    private $_impl;
+    var $_impl;
 
     /**
      * Field object constructor.

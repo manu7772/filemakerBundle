@@ -1,24 +1,24 @@
 <?php
   class FileMaker_Parser_FMPXMLLAYOUT
 {
-  public  $Vd05b6ed7;
- public  $Ve3ad9440;
+  var $Vd05b6ed7;
+ var $Ve3ad9440;
 
   
- public  $V6a45a325;
- public  $_fm;
- public  $V5431b8d4;
- public  $V6de51026 = false;
- public  $V191be3bd;
- public  $V32e51cce;
+ var $V6a45a325;
+ var $_fm;
+ var $V5431b8d4;
+ var $V6de51026 = false;
+ var $V191be3bd;
+ var $V32e51cce;
 
   
- public $V582ddd29;
- public static function FileMaker_Parser_FMPXMLLAYOUT(&$V0ab34ca9)
+ var$V582ddd29;
+ function FileMaker_Parser_FMPXMLLAYOUT(&$V0ab34ca9)
  {
  $this->_fm =& $V0ab34ca9;
 }
- public static function parse($V0f635d0e)
+ function parse($V0f635d0e)
  {
  if (empty($V0f635d0e)) {
  return new FileMaker_Error($this->_fm, 'Did not receive an XML document from the server.');
@@ -41,7 +41,7 @@ xml_set_character_data_handler($this->V5431b8d4, '_cdata');
 $this->V6de51026= true;
 return true;
 }
- public static function setExtendedInfo(&$Vc6140495)
+ function setExtendedInfo(&$Vc6140495)
  {
  if (!$this->V6de51026) {
  return new FileMaker_Error($this->_fm, 'Attempt to set extended information before parsing data.');
@@ -54,7 +54,7 @@ $V8fa14cdd->_impl->_styleType = $V77be71a4['styleType'];
 $V8fa14cdd->_impl->_valueList = $V77be71a4['valueList'] ? $V77be71a4['valueList'] : null;
 }
 }
- public static function _start($V3643b863, $Vb068931c, $V5d06e8a3)
+ function _start($V3643b863, $Vb068931c, $V5d06e8a3)
  { 
  $V5d06e8a3 = $this->_fm->toOutputCharset($V5d06e8a3);
 switch ($Vb068931c) {
@@ -77,7 +77,7 @@ break;
 }
 $this->inside_data = false;
 }
- public static function _end($V3643b863, $Vb068931c)
+ function _end($V3643b863, $Vb068931c)
  {
  switch ($Vb068931c) {
  case 'FIELD':
@@ -90,10 +90,9 @@ break;
 
  $this->inside_data = false;
 }
- public static function _cdata($V3643b863, $V8d777f38)
+ function _cdata($V3643b863, $V8d777f38)
  {
- if ($this->V32e51cce!== null && preg_match('|\S|', $V8d777f38)) {
-  
+ if ($this->V32e51cce!== null && preg_match('|\S|', $V8d777f38)) {  
  if($this->inside_data){
  $V78656626 = $this->V6a45a325[$this->V32e51cce][$this->V582ddd29];
 $V8d777f38 = $V78656626 . $V8d777f38;

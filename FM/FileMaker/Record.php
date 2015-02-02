@@ -45,7 +45,7 @@ class FileMaker_Record
      * @var FileMaker_Record_Implementation
      * @access private
      */
-    private $_impl;
+    var $_impl;
 
     /**
      * Record object constructor.
@@ -54,7 +54,7 @@ class FileMaker_Record
      *        object associated with this record or the Related Set object 
      *        that this record is a member of.
      */
-    public static function FileMaker_Record(&$layout)
+    function FileMaker_Record(&$layout)
     {
         $this->_impl = new FileMaker_Record_Implementation($layout);
     }
@@ -64,7 +64,7 @@ class FileMaker_Record
      *
      * @return FileMaker_Layout This record's layout.
      */
-    public static function &getLayout()
+    function &getLayout()
     {
         return $this->_impl->getLayout();
     }
@@ -78,7 +78,7 @@ class FileMaker_Record
      *
      * @return array List of field names as strings.
      */
-    public static function getFields()
+    function getFields()
     {
         return $this->_impl->getFields();
     }
@@ -96,7 +96,7 @@ class FileMaker_Record
      *
      * @return string Encoded field value.
      */
-    public static function getField($field, $repetition = 0)
+    function getField($field, $repetition = 0)
     {
         return $this->_impl->getField($field, $repetition);
     }
@@ -113,7 +113,7 @@ class FileMaker_Record
      *
      * @return string Unencoded field value.
      */
-    public static function getFieldUnencoded($field, $repetition = 0)
+    function getFieldUnencoded($field, $repetition = 0)
     {
         return $this->_impl->getFieldUnencoded($field, $repetition);
     }
@@ -136,7 +136,7 @@ class FileMaker_Record
      *
      * @return integer Timestamp value.
      */
-    public static function getFieldAsTimestamp($field, $repetition = 0)
+    function getFieldAsTimestamp($field, $repetition = 0)
     {
         return $this->_impl->getFieldAsTimestamp($field, $repetition);
     }
@@ -149,7 +149,7 @@ class FileMaker_Record
      * @param integer $repetition Field repetition number to set. 
      *        Defaults to the first repetition.
      */
-    public static function setField($field, $value, $repetition = 0)
+    function setField($field, $value, $repetition = 0)
     {
         return $this->_impl->setField($field, $value, $repetition);
     }
@@ -170,7 +170,7 @@ class FileMaker_Record
      * @param integer $repetition Field repetition number to set. 
      *        Defaults to the first repetition.
      */
-    public static function setFieldFromTimestamp($field, $timestamp, $repetition = 0)
+    function setFieldFromTimestamp($field, $timestamp, $repetition = 0)
     {
         return $this->_impl->setFieldFromTimestamp($field, $timestamp, $repetition);
     }
@@ -180,7 +180,7 @@ class FileMaker_Record
      *
      * @return string Record ID.
      */
-    public static function getRecordId()
+    function getRecordId()
     {
         return $this->_impl->getRecordId();
     }
@@ -194,7 +194,7 @@ class FileMaker_Record
      *
      * @return integer Modification ID.
      */
-    public static function getModificationId()
+    function getModificationId()
     {
         return $this->_impl->getModificationId();
     }
@@ -207,7 +207,7 @@ class FileMaker_Record
      *
      * @return array Array of FileMaker_Record objects from $relatedSet|FileMaker_Error object.
      */
-    public static function &getRelatedSet($relatedSet)
+    function &getRelatedSet($relatedSet)
     {
         return $this->_impl->getRelatedSet($relatedSet);
     }
@@ -219,7 +219,7 @@ class FileMaker_Record
      *
      * @return FileMaker_Record A new, blank record.
      */
-    public static function &newRelatedRecord($relatedSet)
+    function &newRelatedRecord($relatedSet)
     {
         return $this->_impl->newRelatedRecord($this, $relatedSet);
     }
@@ -229,7 +229,7 @@ class FileMaker_Record
      *
      * @return FileMaker_Record Parent record.
      */
-    public static function &getParent()
+    function &getParent()
     {
         return $this->_impl->getParent();
     }
@@ -256,7 +256,7 @@ class FileMaker_Record
      * @return boolean|FileMaker_Error_Validation TRUE, if pre-validation 
      *         passes for $value. Otherwise, an Error Validation object.
      */
-    public static function validate($fieldName = null)
+    function validate($fieldName = null)
     {
         return $this->_impl->validate($fieldName);
     }
@@ -267,7 +267,7 @@ class FileMaker_Record
      * @return boolean|FileMaker_Error TRUE, if successful. Otherwise, an Error
      *         object.
      */
-    public static function commit()
+    function commit()
     {
         return $this->_impl->commit();
     }
@@ -277,7 +277,7 @@ class FileMaker_Record
      *
      * @return FileMaker_Result Response object.
      */
-    public static function delete()
+    function delete()
     {
         return $this->_impl->delete();
     }
@@ -293,7 +293,7 @@ class FileMaker_Record
      * 
      * @return FileMaker_Response Response object.
      */
-    private function getRelatedRecordById($relatedSetName, $recordId)
+    function getRelatedRecordById($relatedSetName, $recordId)
     {	
     	return $this->_impl->getRelatedRecordById($relatedSetName, $recordId);	
     }

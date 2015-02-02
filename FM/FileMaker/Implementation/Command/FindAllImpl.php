@@ -13,8 +13,7 @@
  $this->_setSortParams($V21ffce5b);
 $this->_setRangeParams($V21ffce5b); 
  $V0f635d0e = $this->_fm->_execute($V21ffce5b);
-// if (FileMaker::isError($V0f635d0e)) {
-if (is_a($V0f635d0e, 'FileMaker_Error')) {
+if (FileMaker::isError($V0f635d0e)) {
  return $V0f635d0e;
 } 
  return $this->_getResult($V0f635d0e);

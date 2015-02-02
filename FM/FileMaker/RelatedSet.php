@@ -34,7 +34,7 @@ class FileMaker_RelatedSet
      * @var FileMaker_RelatedSet_Implementation
      * @access private
      */
-    private $_impl;
+    var $_impl;
 
     /**
      * Portal constructor.
@@ -100,7 +100,7 @@ class FileMaker_RelatedSet
      * @return boolean|FileMaker_Error TRUE, if successful. Otherwise, an Error 
      *         object.
      */
-    private function loadExtendedInfo()
+    function loadExtendedInfo()
     {
         return $this->_impl->loadExtendedInfo();
     }

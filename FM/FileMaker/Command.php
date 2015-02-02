@@ -35,7 +35,7 @@ class FileMaker_Command
      * @var FileMaker_Command_Implementation
      * @access private
      */
-    private $_impl;
+    var $_impl;
 
     /**
      * Requests that the command's result be returned in a layout different 
@@ -43,7 +43,7 @@ class FileMaker_Command
      *
      * @param string $layout Layout to return results in.
      */
-    public static function setResultLayout($layout)
+    function setResultLayout($layout)
     {
         $this->_impl->setResultLayout($layout);
     }
@@ -55,7 +55,7 @@ class FileMaker_Command
      * @param string $scriptName Name of the ScriptMaker script to run.
      * @param string $scriptParameters Any parameters to pass to the script.
      */
-    public static function setScript($scriptName, $scriptParameters = null)
+    function setScript($scriptName, $scriptParameters = null)
     {
         $this->_impl->setScript($scriptName, $scriptParameters);
     }
@@ -66,7 +66,7 @@ class FileMaker_Command
      * @param string $scriptName Name of the ScriptMaker script to run.
      * @param string $scriptParameters Any parameters to pass to the script.
      */
-    public static function setPreCommandScript($scriptName, $scriptParameters = null)
+    function setPreCommandScript($scriptName, $scriptParameters = null)
     {
         $this->_impl->setPreCommandScript($scriptName, $scriptParameters);
     }
@@ -78,7 +78,7 @@ class FileMaker_Command
      * @param string $scriptName Name of the ScriptMaker script to run.
      * @param string $scriptParameters Any parameters to pass to the script.
      */
-    public static function setPreSortScript($scriptName, $scriptParameters = null)
+    function setPreSortScript($scriptName, $scriptParameters = null)
     {
         $this->_impl->setPreSortScript($scriptName, $scriptParameters);
     }
@@ -95,7 +95,7 @@ class FileMaker_Command
      *
      * @param string $className Name of the class to represent records.
      */
-    public static function setRecordClass($className)
+    function setRecordClass($className)
     {
         $this->_impl->setRecordClass($className);
     }
@@ -122,7 +122,7 @@ class FileMaker_Command
      * @return boolean|FileMaker_Error_Validation TRUE, if pre-validation 
      *         passes. Otherwise, an Error Validation object.
      */
-    public static function validate($fieldName = null)
+    function validate($fieldName = null)
     {
         return $this->_impl->validate($fieldName);
     }
@@ -132,7 +132,7 @@ class FileMaker_Command
      *
      * @return FileMaker_Result Result object.
      */
-    public static function execute()
+    function execute()
     {
         return $this->_impl->execute();
     }
@@ -146,7 +146,7 @@ class FileMaker_Command
      *
      * @param string $recordId ID of record this command acts upon.
      */
-    public static function setRecordId($recordId)
+    function setRecordId($recordId)
     {
         $this->_impl->setRecordId($recordId);
     }
