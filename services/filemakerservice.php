@@ -34,7 +34,7 @@ class filemakerservice {
 	// bases FM
 	protected $FMbase_paramfile;				// fichier de paramètres de l'API FileMaker
 	protected $FMfind = array();				// Résultat de recherche FM
-	protected $FMbase = array();				// Objets FileMaker : 
+	protected $FMbase;							// Objet FileMaker : 
 												// FMbase['serveur']['base']['SA_access']['objet']
 												// FMbase['serveur']['base']['US_access']['objet']
 	protected $FMbaseUser = null;
@@ -83,11 +83,16 @@ class filemakerservice {
 		$this->DEVdata["Environnement"] = $this->env;
 		if($this->env === "prod") $this->DEV = false;
 		// $this->DEV = true;
+		$this->DEV = false;
 		//
 		// switch ON/OFF service
 		$this->FM_Operationnel = $this->attributeSess->get($this->FMdataOK);
-		if($this->FM_Operationnel === true) $this->echoDev("<h3>CONSTRUCTEUR =&gt; statut ".$this->getName()." : actif</h3>", null, "green");
-			else $this->echoDev("<h3>CONSTRUCTEUR =&gt; statut ".$this->getName()." : inactif</h3>", null, "red");
+		if($this->FM_Operationnel === true) {
+			$this->getFilemakerserviceDataInSession();
+			$this->echoDev("<h3>CONSTRUCTEUR =&gt; statut ".$this->getName()." : actif</h3>", null, "green");
+		} else {
+			$this->echoDev("<h3>CONSTRUCTEUR =&gt; statut ".$this->getName()." : inactif</h3>", null, "red");
+		}
 
 		return $this;
 	}
@@ -233,7 +238,7 @@ class filemakerservice {
 			}
 		} else {
 			// chargement des données en session
-			$this->getFilemakerserviceDataInSession(null, true);
+			$this->getFilemakerserviceDataInSession();
 			$this->DEVdata["Chargement"] = "Chargement depuis session";
 		}
 		$this->echoDev("<h4><i> -&gt; Initialise : ".$this->DEVdata["Chargement"]."</i></h4>", null, SYMB_COLOR9);
@@ -837,8 +842,8 @@ class filemakerservice {
 		if($SERVnom !== null) {
 			if($this->setCurrentSERVER($SERVnom) === false) return 'Serveur '.$SERVnom." absent. Impossible d'accéder aux données";
 		}
-		if($BASEnom !== null) {
-			if($this->setCurrentBASE($BASEnom) === false) return 'Base '.$BASEnom." absente. Impossible d'accéder aux données";
+		if($nomBASE !== null) {
+			if($this->setCurrentBASE($nomBASE) === false) return 'Base '.$nomBASE." absente. Impossible d'accéder aux données";
 		}
 		if(!$this->layoutExists($model)) return "Modèle \"".$model."\" absent. Impossible d'accéder aux données.";
 		if(!$this->isUserLogged() === true) return "Utilisateur non connecté.";
@@ -1053,14 +1058,14 @@ class filemakerservice {
 
 	/**
 	 * Récupère les données du service en session
-	 * @param string $nom - nom des données ($this->sessionServiceNom)
-	 * @return mixed
+	 * @param string $nom - nom des données (par défaut : valeur de $this->sessionServiceNom)
+	 * @return boolean
 	 */
-	public function getFilemakerserviceDataInSession($nom = null, $loadthem = false) {
+	public function getFilemakerserviceDataInSession($nom = null) {
 		if($nom === null) $nom = $this->sessionServiceNom;
-		$data = $this->serviceSess->get($nom);
-		if($loadthem === true) $this->SERVER = $data;
-		return $data;
+		$this->SERVER = $this->serviceSess->get($nom);
+		count($this->SERVER) > 0 ? $r = true : $r = false ;
+		return $r;
 	}
 
 	/**
@@ -1268,7 +1273,8 @@ class filemakerservice {
 	 * @return string (?)
 	 */
 	public function getAPIVersion() {
-		return $this->FMbase->getAPIVersion();
+		if(is_object($this->FMbase)) return $this->FMbase->getAPIVersion();
+		else return 'Version indisponible';
 	}
 
 
