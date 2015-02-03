@@ -62,6 +62,8 @@ class filemakerservice {
 	// USER
 	protected $user_defined = false;
 	protected $user_logged = false;
+	protected $loguser = null;
+	protected $logpass = null;
 
 	// DEV et environnement
 	protected $DEV = true;
@@ -220,10 +222,10 @@ class filemakerservice {
 							}
 						}
 					}
-					// réactive la mise en session des données
-					$this->enablePutSessionData();
 					// Sauvegarde en session
 					$this->echoDev("<h4><i>- Mise en session des données</i></h4>");
+					// réactive la mise en session des données
+					$this->enablePutSessionData();
 					$this->putDataInSession();
 				} else {
 					$this->SERVER[$this->defaultErrSERVERname] = $this->defaultErrSERVER;
@@ -262,7 +264,7 @@ class filemakerservice {
 	
 			// DEV
 			$this->DEVdata['Serveur courant'] = $this->getCurrentSERVER();
-			// $this->DEVdata['Base courante'] = $this->getCurrentBASE();
+			$this->DEVdata['Base courante'] = $this->getCurrentBASE();
 			$this->DEVdata['Ip courant'] = $this->getCurrentIP();
 			$this->DEVdata['SAdmin login'] = $this->getCurrentSAdminLogin();
 			$this->DEVdata['SAdmin password'] = $this->getCurrentSAdminPasse();
@@ -688,6 +690,10 @@ class filemakerservice {
 		return $this->isUserLogged();
 	}
 
+	public function re_log_user() {
+		return $this->log_user($this->loguser, $this->logpass);
+	}
+
 
 	// ***********************
 	// SETTERS privés
@@ -706,6 +712,8 @@ class filemakerservice {
 			}
 			// Attribue le nouveau serveur par défaut
 			$this->SERVER[$SERVnom]['default'] = $this->defaultValueON;
+			// relog user
+			$this->re_log_user();
 			// Sauvegarde en session
 			$this->putDataInSession();
 		} else return false;
@@ -724,6 +732,8 @@ class filemakerservice {
 		if(in_array($nomBASE, $this->getListOfBases($this->getCurrentSERVER(), "valids"))) {
 			$this->currentBASE = $nomBASE;
 		} else return false;
+		// relog user
+		$this->re_log_user();
 		// Sauvegarde en session
 		$this->putDataInSession();
 		return $this;
@@ -737,6 +747,8 @@ class filemakerservice {
 		foreach ($this->SERVER as $SERVnom => $SERV) {
 			if($SERV['default'] === $this->defaultValueON) $this->defaultSERVER = $SERVnom;
 		}
+		// relog user
+		$this->re_log_user();
 		// Sauvegarde en session
 		$this->putDataInSession();
 		return $this;
@@ -789,6 +801,8 @@ class filemakerservice {
 				}
 				// définit le nouveau serveur
 				$this->SERVER[$SERVnom]['current'] = $this->defaultValueON;
+				// relog user
+				$this->re_log_user();
 				// Sauvegarde en session
 				$this->putDataInSession();
 			} else {
@@ -823,6 +837,8 @@ class filemakerservice {
 				}
 				// définit la nouvelle bas
 				$this->SERVER[$SERVnom]['databases']['valids'][$nomBASE]['current'] = $this->defaultValueON;
+				// relog user
+				$this->re_log_user();
 				// Sauvegarde en session
 				$this->putDataInSession();
 			} else return false;
@@ -858,16 +874,16 @@ class filemakerservice {
 
 	/**
 	 * Liste des recherches de databases du serveur $serveur
-	 * @param string $serveur - ip du serveur
+	 * @param string $ServIP - ip du serveur
 	 */
-	protected function getListOfSrvDatabases($SERVnom = null) {
+	protected function getListOfSrvDatabases($ServIP = null) {
 		$fm = new \FileMaker();
-		$fm->setProperty('hostspec', $SERVnom);
+		$fm->setProperty('hostspec', $ServIP);
 		$records = $fm->listDatabases();
 		if ($fm->isError($records)) {
-			$records = "Erreur en accès serveur ".$SERVnom;
+			$records = "Erreur en accès serveur ".$ServIP;
 		}
-		// $this->vardumpDev($records, "Liste des bases trouvées sur le srveur ".$SERVnom);
+		// $this->vardumpDev($records, "Liste des bases trouvées sur le srveur ".$ServIP);
 		return $records;
 	}
 
@@ -1232,15 +1248,16 @@ class filemakerservice {
 	public function getData($data) {
 		// public function getData($model, $select = null, $BASEnom = null, $SERVnom = null) {
 		// pour $data :
-		// server=nom_du_serveur
-		// base=nom_de_la_base
-		// modele=nom_du_modele
-		// column=nom_de_la_rubrique
-		// value=valeur_de_recherche
-		// order=ordre_de_tri ("ASC" ou "DESC")
-		// reset=1 ou 0 (1 pour réinitialiser)
-
+		// server 		= nom_du_serveur
+		// base 		= nom_de_la_base
+		// modele 		= nom_du_modele
+		// column 		= nom_de_la_rubrique
+		// value 		= valeur_de_recherche
+		// order 		= ordre_de_tri ("ASC" ou "DESC")
+		// reset 		= 1 ou 0 (1 pour réinitialiser)
+		// echo('<pre>');
 		// var_dump($data);
+		// echo('</pre>');
 		$model = $this->setCurrentModel($data['modele'], $data['base'], $data['server']);
 		// erreur ?
 		if(is_string($model)) return $model;
@@ -1251,13 +1268,13 @@ class filemakerservice {
 		// reset select
 		if(isset($data['reset'])) if($data['reset'] === "1") $this->resetAllSelect();
 
-		if(is_array($data['search'])) {
+		if(isset($data['search'])) {
 			if(count($data['search']) > 0) foreach ($data['search'] as $key => $value) {
 				$this->FMfind->addFindCriterion($value['column'], $value['value']);
 			}
 		}
 
-		if(is_array($data['sort'])) {
+		if(isset($data['sort'])) {
 			if(count($data['sort']) > 0) foreach ($data['sort'] as $key => $value) {
 				if(strtoupper($value['way']) === "ASC") $way = FILEMAKER_SORT_ASCEND;
 					else $way = FILEMAKER_SORT_DESCEND;
