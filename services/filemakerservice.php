@@ -1486,9 +1486,9 @@ class filemakerservice {
 		$style = " style='margin:4px 0px 8px 20px;padding-left:4px;border-left:1px solid #666;'";
 		$istyle = " style='color:#999;font-style:italic;'";
 		if(is_string($nom)) {
-			$affNom = " [\"".$nom."\"]";
+			$affNom = "[\"".$nom."\"] ";
 		} else if(is_int($nom)) {
-			$affNom = " [".$nom."]";
+			$affNom = "[".$nom."] ";
 		} else {
 			$affNom = "";
 			$nom = null;
@@ -1496,21 +1496,39 @@ class filemakerservice {
 		switch (strtolower(gettype($data))) {
 			case 'array':
 				echo("<div".$style.">");
-				echo("<i".$istyle.">".gettype($data)."</i> (".count($data).")".$affNom);
+				echo($affNom."<i".$istyle.">".gettype($data)."</i> (".count($data).")");
 				foreach($data as $nom2 => $dat2) $this->affPreData($dat2, $nom2);
+				echo("</div>");
+				break;
+			case 'object':
+				$tests = array('id', 'nom', 'dateCreation');
+				$tab = array();
+				foreach($tests as $nomtest) {
+					$method = 'get'.ucfirst($nomtest);
+					if(method_exists($data, $method)) {
+						$val = $data->$method();
+						// if($val instanceOf \DateTime) $val = $val->format("Y-m-d H:i:s");
+						$tab[$nomtest] = $val;
+					}
+				}
+				if($data instanceOf \DateTime) $affdata = $data->format("Y-m-d H:i:s");
+					else $affdata = '';
+				echo("<div".$style.">");
+				echo($affNom." <i".$istyle.">".gettype($data)." > ".get_class($data)."</i> ".$affdata); // [ ".implode(" ; ", $tab)." ]
+				foreach($tab as $nom2 => $dat2) $this->affPreData($dat2, $nom2);
 				echo("</div>");
 				break;
 			case 'string':
 			case 'integer':
 				echo("<div".$style.">");
-				echo($affNom." = <i".$istyle.">".gettype($data)."</i> \"".$data."\"");
+				echo($affNom." <i".$istyle.">".gettype($data)."</i> \"".$data."\"");
 				echo("</div>");
 				break;
 			case 'boolean':
 				echo("<div".$style.">");
 				if($data === true) $databis = 'true';
 					else $databis = 'false';
-				echo($affNom." = <i".$istyle.">".gettype($data)."</i> ".$databis);
+				echo($affNom." <i".$istyle.">".gettype($data)."</i> ".$databis);
 				echo("</div>");
 				break;
 			case 'null':
@@ -1520,7 +1538,7 @@ class filemakerservice {
 				break;
 			default:
 				echo("<div".$style.">");
-				echo(gettype($data).$affNom);
+				echo($affNom." <i".$istyle.">".gettype($data)."</i> ");
 				echo("</div>");
 				break;
 		}
@@ -1533,14 +1551,12 @@ class filemakerservice {
 	 * @param string $titre = null
 	 */
 	protected function vardumpDev($data, $titre = null) {
-		if($this->DEV === true) {
-			echo("<div style='border:1px dotted #666;padding:4px 8px;margin:8px 24px;'>");
-			if($titre !== null && is_string($titre) && strlen($titre) > 0) {
-				echo('<h3 style="margin-top:0px;padding-top:0px;border-bottom:1px dotted #999;margin-bottom:4px;">'.$titre.'</h3>');
-			}
-			$this->affPreData($data);
-			echo("</div>");
+		echo("<div style='border:1px dotted #666;padding:4px 8px;margin:8px 24px;'>");
+		if($titre !== null && is_string($titre) && strlen($titre) > 0) {
+			echo('<h3 style="margin-top:0px;padding-top:0px;border-bottom:1px dotted #999;margin-bottom:4px;">'.$titre.'</h3>');
 		}
+		$this->affPreData($data);
+		echo("</div>");
 	}
 
 	/**
