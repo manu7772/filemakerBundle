@@ -1551,12 +1551,14 @@ class filemakerservice {
 	 * @param string $titre = null
 	 */
 	protected function vardumpDev($data, $titre = null) {
-		echo("<div style='border:1px dotted #666;padding:4px 8px;margin:8px 24px;'>");
-		if($titre !== null && is_string($titre) && strlen($titre) > 0) {
-			echo('<h3 style="margin-top:0px;padding-top:0px;border-bottom:1px dotted #999;margin-bottom:4px;">'.$titre.'</h3>');
+		if($this->DEV === true) {
+			echo("<div style='border:1px dotted #666;padding:4px 8px;margin:8px 24px;'>");
+			if($titre !== null && is_string($titre) && strlen($titre) > 0) {
+				echo('<h3 style="margin-top:0px;padding-top:0px;border-bottom:1px dotted #999;margin-bottom:4px;">'.$titre.'</h3>');
+			}
+			$this->affPreData($data);
+			echo("</div>");
 		}
-		$this->affPreData($data);
-		echo("</div>");
 	}
 
 	/**
