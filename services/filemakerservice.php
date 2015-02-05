@@ -675,8 +675,8 @@ class filemakerservice {
 	 */
 	public function log_user($userOrLogin = null, $pass = null, $force = false) {
 		if($force === true) {
-			$userOrLogin = "sadmin";
-			$pass = "symfony76";
+			$userOrLogin = $this->container->getParameter('sadmin_login'); // "sadmin";
+			$pass = $this->container->getParameter('sadmin_pass'); // "symfony76";
 		}
 		// $this->setUserLogg(false);
 		if((($userOrLogin !== null) && ($pass !== null)) || (is_object($userOrLogin))) {
@@ -1238,6 +1238,29 @@ class filemakerservice {
 			if(count($records) < 1) $records = "Aucun modèle trouvé.";
 		}
 		return $records;
+	}
+
+	/**
+	 * Renvoie la liste des champs de $layout
+	 * @param string $layout - nom du modèle
+	 * @param string $BASEnom - nom de la base (optionnel)
+	 * @param string $SERVnom - nom du serveur (optionnel)
+	 */
+	public function getFields($layout, $BASEnom = null, $SERVnom = null) {
+		if($SERVnom === null) $SERVnom = $this->getDefaultSERVER();
+		if($BASEnom === null) $BASEnom = $this->getDefaultBASE();
+		
+		if(isset($this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'])) {
+			if(in_array($layout, $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'])) {
+				if($this->setCurrentBASE($BASEnom, $SERVnom) !== false) {
+					$lay = $this->FMbaseUser->getLayout($layout);
+					$result = $lay->listFields();
+					// $result = $lay->getFields();
+					if(count($result) < 1) $result = "Aucun champ trouvé dans le modèle ".$layout.".";
+				} else $result = "Erreur au changement de base ou serveur.";
+			} else $result = "Ce modèle n'existe pas.";
+		} else $result = "Base non reconnue.";
+		return $result;
 	}
 
 	/**
