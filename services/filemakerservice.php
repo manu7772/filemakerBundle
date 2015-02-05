@@ -1264,6 +1264,32 @@ class filemakerservice {
 	}
 
 	/**
+	 * Renvoie la liste des champs de $layout et détails en plus
+	 * @param string $layout - nom du modèle
+	 * @param string $BASEnom - nom de la base (optionnel)
+	 * @param string $SERVnom - nom du serveur (optionnel)
+	 */
+	public function getDetailFields($layout, $BASEnom = null, $SERVnom = null) {
+		if($SERVnom === null) $SERVnom = $this->getDefaultSERVER();
+		if($BASEnom === null) $BASEnom = $this->getDefaultBASE();
+		
+		if(isset($this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'])) {
+			if(in_array($layout, $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'])) {
+				if($this->setCurrentBASE($BASEnom, $SERVnom) !== false) {
+					$lay = $this->FMbaseUser->getLayout($layout);
+					// $result = $lay->listFields();
+					$result['fields'] = $lay->getFields();
+					$result['rel_fields'] = $lay->listRelatedSets();
+					$result['layout'] = $lay->getName();
+					$result['base'] = $lay->getDatabase();
+					if(count($result) < 1) $result = "Aucun champ trouvé dans le modèle ".$layout.".";
+				} else $result = "Erreur au changement de base ou serveur.";
+			} else $result = "Ce modèle n'existe pas.";
+		} else $result = "Base non reconnue.";
+		return $result;
+	}
+
+	/**
 	 * Renvoie la liste des données demandées dans le modèle $model
 	 * @param string $model - nom du modèle
 	 * @return array ou string si erreur
