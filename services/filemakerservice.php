@@ -13,6 +13,9 @@ define('SYMB_LIST1', " -&gt; ");
 define('SYMB_COLOR9', "#999");
 define('SYMB_COLOR_ERROR', "red");
 
+define('STR_BEG', chr(238).chr(128).chr(129));
+define('STR_END', chr(238).chr(128).chr(130));
+
 class filemakerservice {
 
 	protected $container;						// ContainerInterface
@@ -38,6 +41,9 @@ class filemakerservice {
 												// FMbase['serveur']['base']['SA_access']['objet']
 												// FMbase['serveur']['base']['US_access']['objet']
 	protected $FMbaseUser = null;
+
+	protected $groupScripts;					// liste (array récursif) et groupes de scripts
+	protected $listScripts;						// liste simple des scripts
 
 	// Données globales
 	protected $SERVER = array(); 				// Liste des serveurs
@@ -120,7 +126,9 @@ class filemakerservice {
 			$this->echoDev('Après analyse…');
 			$this->container->getRequest()->attributes->set($this->FMdataOK, $this->FM_Operationnel);
 		} else {
-			$this->container->getRequest()->attributes->set($this->requestType, "Requête secondaire");
+			if($this->container instanceOf FilterControllerEvent) {
+				$this->container->getRequest()->attributes->set($this->requestType, "Requête secondaire");
+			}
 			$this->echoDev('<h4>LISTENER =&gt; Loading filemakerservice <small>(Requête secondaire)</small></h4>', null, SYMB_COLOR9);
 			$this->echoDev('<p> --&gt; Aucune action</p>', null, "#aaa");
 		}
@@ -1173,9 +1181,11 @@ class filemakerservice {
 	 * Renvoie la liste des scripts
  	 * @param string $SERVnom - nom du serveur (ou serveur par défaut si null)
 	 * @param string $BASEnom - nom de la base (ou base par défaut si null)
+	 * @param boolean $forceload
+	 * @param boolean $trad - false : résultat en liste simple / true : résultat en groupes (tableau récursif)
 	 * @return array / string
 	 */
-	public function getScripts($SERVnom = null, $BASEnom = null, $forceLoad = false) {
+	public function getScripts($SERVnom = null, $BASEnom = null, $forceLoad = false, $trad = false) {
 		if($SERVnom === null) {
 			$SERVnom = $this->getCurrentSERVER();
 		} else if(!$this->serverExists($SERVnom)) {
@@ -1203,11 +1213,75 @@ class filemakerservice {
 			} else $records = array();
 			if(count($records) < 1) $records = "Aucun script trouvé.";
 		}
+		$this->sortGroupScripts($records);
+		$this->sortListeScripts($records);
+		// $this->DEV = true;
+		$this->vardumpDev($this->groupScripts, "Scripts groupes");
+		$this->vardumpDev($this->listScripts, "Scripts liste simple");
+		// $this->DEV = false;
+		if($trad === true) {
+			// Renvoie $this->groupScripts
+			$records = $this->groupScripts;
+		} else {
+			// Renvoie $this->listScripts
+			$records = $this->listScripts;
+		}
 		return $records;
 	}
 
 	/**
-	 * Renvoie la liste des modèles
+	 * Transforme le résultat de getScripts en présentation array (liste simple)
+	 * @return array
+	 */
+	protected function sortListeScripts($list) {
+		$this->listScripts = array();
+		foreach ($list as $key => $value) {
+			if(!preg_match('#^('.STR_BEG.'|'.STR_END.')#', $value)) {
+				$this->listScripts[] = $value;
+			}
+		}
+		return $this->listScripts;
+	}
+
+	/**
+	 * Transforme le résultat de getScripts en présentation en groupes (récursifs)
+	 * @return array
+	 */
+	protected function sortGroupScripts($list) {
+		if(is_array($list)) {
+			$this->groupScripts = $list;
+			reset($this->groupScripts);
+			$data = $this->reTradScripts();
+			$this->groupScripts = $data;
+		} else $this->groupScripts = array();
+		return $this->groupScripts;
+	}
+	/**
+	 * Fonction récursive de tri des scripts - appelée par $this->sortGroupScripts
+	 * @return array
+	 */
+	protected function reTradScripts() {
+		$data = array();
+		do {
+			$nom = current($this->groupScripts);
+			$nom2 = next($this->groupScripts);
+			if(preg_match('#^'.STR_END.'#', $nom)) {
+				// echo('Retour…<br>');
+				return $data;
+			}
+			if(preg_match('#^'.STR_BEG.'#', $nom)) {
+				// echo(preg_replace('#^'.STR_BEG.'#', "Groupe_", $nom)."<br>");
+				$data[preg_replace('#^'.STR_BEG.'#', "", $nom)] = $this->reTradScripts();
+			} else {
+				$data[] = $nom;
+				// echo(' - '.$nom.'<br>');
+			}
+		} while(is_string($nom2));
+		return $data;
+	}
+
+	/**
+	 * Renvoie la liste des modèles (en récursif)
 	 * @return array
 	 */
 	public function getLayouts($SERVnom = null, $BASEnom = null, $forceLoad = false) {
@@ -1245,6 +1319,7 @@ class filemakerservice {
 	 * @param string $layout - nom du modèle
 	 * @param string $BASEnom - nom de la base (optionnel)
 	 * @param string $SERVnom - nom du serveur (optionnel)
+	 * @return array
 	 */
 	public function getFields($layout, $BASEnom = null, $SERVnom = null) {
 		if($SERVnom === null) $SERVnom = $this->getDefaultSERVER();
@@ -1264,10 +1339,11 @@ class filemakerservice {
 	}
 
 	/**
-	 * Renvoie la liste des champs de $layout et détails en plus
+	 * Renvoie la liste DÉTAILLÉE des champs de $layout
 	 * @param string $layout - nom du modèle
 	 * @param string $BASEnom - nom de la base (optionnel)
 	 * @param string $SERVnom - nom du serveur (optionnel)
+	 * @return array
 	 */
 	public function getDetailFields($layout, $BASEnom = null, $SERVnom = null) {
 		if($SERVnom === null) $SERVnom = $this->getDefaultSERVER();
@@ -1295,6 +1371,8 @@ class filemakerservice {
 	 * @return array ou string si erreur
 	 */
 	public function getData($data) {
+		// https://fmhelp.filemaker.com/docs/13/fr/fms13_cwp_php.pdf --> p.45
+
 		// public function getData($model, $select = null, $BASEnom = null, $SERVnom = null) {
 		// pour $data :
 		// server 		= nom_du_serveur
@@ -1315,11 +1393,30 @@ class filemakerservice {
 		$this->FMfind = $this->FMbaseUser->newFindCommand($model['nom']);
 
 		// reset select
-		if(isset($data['reset'])) if($data['reset'] === "1") $this->resetAllSelect();
+		// if(isset($data['reset'])) if($data['reset'] === "1") $this->resetAllSelect();
 
 		if(isset($data['search'])) {
-			if(count($data['search']) > 0) foreach ($data['search'] as $key => $value) {
-				$this->FMfind->addFindCriterion($value['column'], $value['value']);
+			if(count($data['search']) > 0) {
+				$this->FMfind = $this->FMbaseUser->newCompoundFindCommand($model['nom']);
+				$count = 1;
+				foreach ($data['search'] as $key => $value) {
+					$findreq = $this->FMbaseUser->newFindRequest($model['nom']);
+					if(!isset($value['operator'])) $value['operator'] = null;
+					switch ($value['operator']) {
+						case '>': $op = ">"; break;
+						case '<': $op = "<"; break;
+						case '=': $op = "="; break;
+						// case '!': $op = "!"; break;
+						default: $op = ""; break;
+					}
+					$findreq->addFindCriterion($value['column'], $op.$value['value']);
+					// echo("addFindCriterion : ".$value['column']." ".$op.$value['value']."<br>");
+					if($value['operator'] == '!') {
+						$findreq->setOmit(true);
+						// echo("Exclude : ".$value['column']." = ".$value['value']."<br>");
+					}
+					$this->FMfind->add($count++, $findreq);
+				}
 			}
 		}
 
@@ -1417,7 +1514,7 @@ class filemakerservice {
 	 * @return string
 	 */
 	protected function getNomCurrentSelect($nom = null) {
-		// si $nom non défini, on prend le nom du layout courant
+		// si $nom non défini, on pSTR_END le nom du layout courant
 		if($nom === null) $nom = $this->getCurrentModel();
 		// si nom est complet (3 modules séparés par "::"), on le garde tel quel
 		if(count(explode("::", $nom)) === 3) $r = $nom;
@@ -1527,70 +1624,78 @@ class filemakerservice {
 	}
 
 
+	/****************************************/
+	/*** AUTRES MÉTHODES DE DÉVELOPPEMENT
+	/****************************************/
+
 	/**
 	 * affiche le contenu de $data (récursif)
 	 * @param mixed $data
 	 */
 	protected function affPreData($data, $nom = null) {
-		$style = " style='margin:4px 0px 8px 20px;padding-left:4px;border-left:1px solid #666;'";
-		$istyle = " style='color:#999;font-style:italic;'";
-		if(is_string($nom)) {
-			$affNom = "[\"".$nom."\"] ";
-		} else if(is_int($nom)) {
-			$affNom = "[".$nom."] ";
-		} else {
-			$affNom = "";
-			$nom = null;
-		}
-		switch (strtolower(gettype($data))) {
-			case 'array':
-				echo("<div".$style.">");
-				echo($affNom."<i".$istyle.">".gettype($data)."</i> (".count($data).")");
-				foreach($data as $nom2 => $dat2) $this->affPreData($dat2, $nom2);
-				echo("</div>");
-				break;
-			case 'object':
-				$tests = array('id', 'nom', 'dateCreation');
-				$tab = array();
-				foreach($tests as $nomtest) {
-					$method = 'get'.ucfirst($nomtest);
-					if(method_exists($data, $method)) {
-						$val = $data->$method();
-						// if($val instanceOf \DateTime) $val = $val->format("Y-m-d H:i:s");
-						$tab[$nomtest] = $val;
+		$this->recurs++;
+		if($this->recurs <= $this->recursMAX) {
+			$style = " style='margin:4px 0px 8px 20px;padding-left:4px;border-left:1px solid #666;'";
+			$istyle = " style='color:#999;font-style:italic;'";
+			if(is_string($nom)) {
+				$affNom = "[\"".$nom."\"] ";
+			} else if(is_int($nom)) {
+				$affNom = "[".$nom."] ";
+			} else {
+				$affNom = "[?]";
+				$nom = null;
+			}
+			switch (strtolower(gettype($data))) {
+				case 'array':
+					echo("<div".$style.">");
+					echo($affNom."<i".$istyle.">".gettype($data)."</i> (".count($data).")");
+					foreach($data as $nom2 => $dat2) $this->affPreData($dat2, $nom2);
+					echo("</div>");
+					break;
+				case 'object':
+					$tests = array('id', 'nom', 'dateCreation');
+					$tab = array();
+					foreach($tests as $nomtest) {
+						$method = 'get'.ucfirst($nomtest);
+						if(method_exists($data, $method)) {
+							$val = $data->$method();
+							// if($val instanceOf \DateTime) $val = $val->format("Y-m-d H:i:s");
+							$tab[$nomtest] = $val;
+						}
 					}
-				}
-				if($data instanceOf \DateTime) $affdata = $data->format("Y-m-d H:i:s");
-					else $affdata = '';
-				echo("<div".$style.">");
-				echo($affNom." <i".$istyle.">".gettype($data)." > ".get_class($data)."</i> ".$affdata); // [ ".implode(" ; ", $tab)." ]
-				foreach($tab as $nom2 => $dat2) $this->affPreData($dat2, $nom2);
-				echo("</div>");
-				break;
-			case 'string':
-			case 'integer':
-				echo("<div".$style.">");
-				echo($affNom." <i".$istyle.">".gettype($data)."</i> \"".$data."\"");
-				echo("</div>");
-				break;
-			case 'boolean':
-				echo("<div".$style.">");
-				if($data === true) $databis = 'true';
-					else $databis = 'false';
-				echo($affNom." <i".$istyle.">".gettype($data)."</i> ".$databis);
-				echo("</div>");
-				break;
-			case 'null':
-				echo("<div".$style.">");
-				echo(gettype($data));
-				echo("</div>");
-				break;
-			default:
-				echo("<div".$style.">");
-				echo($affNom." <i".$istyle.">".gettype($data)."</i> ");
-				echo("</div>");
-				break;
+					if($data instanceOf \DateTime) $affdata = $data->format("Y-m-d H:i:s");
+						else $affdata = '';
+					echo("<div".$style.">");
+					echo($affNom." <i".$istyle.">".gettype($data)." > ".get_class($data)."</i> ".$affdata); // [ ".implode(" ; ", $tab)." ]
+					foreach($tab as $nom2 => $dat2) $this->affPreData($dat2, $nom2);
+					echo("</div>");
+					break;
+				case 'string':
+				case 'integer':
+					echo("<div".$style.">");
+					echo($affNom." <i".$istyle.">".gettype($data)."</i> \"".$data."\"");
+					echo("</div>");
+					break;
+				case 'boolean':
+					echo("<div".$style.">");
+					if($data === true) $databis = 'true';
+						else $databis = 'false';
+					echo($affNom." <i".$istyle.">".gettype($data)."</i> ".$databis);
+					echo("</div>");
+					break;
+				case 'null':
+					echo("<div".$style.">");
+					echo($affNom." <i".$istyle.">type ".strtolower(gettype($data))."</i> ".gettype($data));
+					echo("</div>");
+					break;
+				default:
+					echo("<div".$style.">");
+					echo($affNom." <i".$istyle.">".gettype($data)."</i> ");
+					echo("</div>");
+					break;
+			}
 		}
+		$this->recurs--;
 	}
 
 
