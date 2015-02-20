@@ -1409,8 +1409,10 @@ class filemakerservice {
 						// case '!': $op = "!"; break;
 						default: $op = ""; break;
 					}
+					// echo("<pre>");
+					// var_dump($value);
+					// echo("</pre><br><br>");
 					$findreq->addFindCriterion($value['column'], $op.$value['value']);
-					// echo("addFindCriterion : ".$value['column']." ".$op.$value['value']."<br>");
 					if($value['operator'] == '!') {
 						$findreq->setOmit(true);
 						// echo("Exclude : ".$value['column']." = ".$value['value']."<br>");
