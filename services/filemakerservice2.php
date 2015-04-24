@@ -22,7 +22,7 @@ class filemakerservice2 {
 	const YML_CONFIG_FILE =		'/../../../../../app/config/fmparameters.yml'; // fichier de configuration YAML
 	const SERVICE_NOM =			'filemakerservice2';			// nom du service
 
-	const FM_DATA_OK = 			'_fm_data_ok'; 					// nom de l'attribut d'état du service
+	const FM_DATA_OK = 			'_fm_success_init';				// nom de l'attribut d'état du service
 	const REQUESTYPE = 			'_request_type';				// nom de l'attribut de type de la requête
 	const DEV_SESS_NAME = 		'filemaker_DEV';				//	nom des données de session pour DEV
 	const DEF_ERR_SERVER =		'http://localhost';				// serveur FM par défaut en cas d'erreur et donc aucun serveur dispo
@@ -102,11 +102,13 @@ class filemakerservice2 {
 		} else {
 			// $this->echoDev("<h3>CONSTRUCTEUR =&gt; statut ".$this->getName()." : inactif</h3>", null, "red");
 		}
+		$this->DEVdata[self::NOM_DEV_DATA_SHOW] = array();
 		return $this;
 	}
 
 	function __destruct() {
 		$this->affAllDev();
+		// $this->test($this->getDevData);
 	}
 
 	public function load_fmservice(FilterControllerEvent $event) {
@@ -128,7 +130,7 @@ class filemakerservice2 {
 				$this->container->getRequest()->attributes->set(self::REQUESTYPE, "Requête secondaire");
 			}
 		}
-		$this->vardumpDev($this->getDevData("Chargement"), 'Résultat de l\'analyse : "Chargement"');
+		$this->vardumpDev($this->getDevData("Chargement"), 'Résultat de l\'analyse :');
 	}
 
 	protected function loadYMLparamFile() {
@@ -161,9 +163,9 @@ class filemakerservice2 {
 	protected function initializeService($forceLoad = false) {
 		// désactive la mise en session des données
 		$this->disablePutSessionData();
-		// charge les paramètres de sélection généraux
+		// charge les paramètres de sélection généraux -> $this->fm_params
 		$test = $this->getFromSessionSelects();
-		$this->vardumpDev($test, "Données de paramètres récupérés de session");
+		// $this->vardumpDev($test, "Données de paramètres récupérés de session");
 		//
 		if($this->isDataInSession() === false || $forceLoad === true) {
 			$this->setDevData("Chargement", "Scan servers & databases");
@@ -277,9 +279,9 @@ class filemakerservice2 {
 					$defaultServerFound = self::DEF_VALUE_ON;
 				}
 				// Ajout des modèles
-				$this->getCompleteLayouts();
+				$this->loadCompleteLayouts();
 				// Ajout des scripts
-				$this->getCompleteScripts();
+				$this->loadCompleteScripts();
 
 				// $this->test($this->SERVER);
 
@@ -358,7 +360,7 @@ class filemakerservice2 {
 	 * Récupère et vérifie les modèles de toutes les bases d'un ou plusieurs serveurs $listSRV
 	 * @param string/array $listSRV - nom(s) du(es) serveur(s)
 	 */
-	protected function getCompleteLayouts($listSRV = null) {
+	protected function loadCompleteLayouts($listSRV = null) {
 		if($listSRV === null) $listSRV = $this->getListOfServersNames();
 			else $listSRV = $this->getServerByNom($listSRV);
 		if($listSRV !== false) {
@@ -367,7 +369,8 @@ class filemakerservice2 {
 				foreach($this->SERVER['servers'][$servnom]['bases'] as $nombase => $base) {
 					$layouts = $this->getLayouts($servnom, $nombase, true);
 					if(is_array($layouts)) foreach ($layouts as $key => $layout) {
-						$this->SERVER['servers'][$servnom]['bases'][$nombase]['layouts'][$layout] = $this->getFields($layout, $nombase, $servnom);
+						$this->SERVER['servers'][$servnom]['bases'][$nombase]['layouts'][$layout] = array();
+						$this->SERVER['servers'][$servnom]['bases'][$nombase]['layouts'][$layout]['champs'] = $this->getFields($layout, $nombase, $servnom);
 					}
 				}
 			}
@@ -380,7 +383,7 @@ class filemakerservice2 {
 	 * @param string $SERVnom - nom du serveur
 	 * @return array / string si erreur
 	 */
-	protected function getCompleteScripts($listSRV = null) {
+	protected function loadCompleteScripts($listSRV = null) {
 		if($listSRV === null) $listSRV = $this->getListOfServersNames();
 			else $listSRV = $this->getServerByNom($listSRV);
 		if($listSRV !== false) {
@@ -393,7 +396,6 @@ class filemakerservice2 {
 		} else return false;
 		return true;
 	}
-
 
 	/**
 	 * Liste des éléments requis pour données User (dans XML)
@@ -432,8 +434,10 @@ class filemakerservice2 {
 	protected function getServerByNom($SERVnom) {
 		if(is_string($SERVnom)) {
 			$feedback = 'string';
-			$SERVnom = array($SERVnom);
-		} else $feedback = 'array';
+			$SERVnom = array(0 => $SERVnom);
+		} else if(is_array($SERVnom)) {
+			$feedback = 'array';
+		} else return false;
 		$listOfServersNames = $this->getListOfServersNames();
 		$list = array();
 		foreach ($SERVnom as $nom) {
@@ -469,11 +473,31 @@ class filemakerservice2 {
 	}
 
 	protected function getSAdminCurrentLogin() {
-		return $this->SERVER['servers'][$this->getCurrentSERVER()]['bases'][$this->getCurrentBASE()]['access']['login'];
+		$server = $this->getCurrentSERVER();
+		$base = $this->getCurrentBASE();
+		if($server !== false && $base !== false) return $this->SERVER['servers'][$server]['bases'][$this->getCurrentBASE()]['access']['login'];
+			else return false;
 	}
 
 	protected function getSAdminCurrentPasse() {
-		return $this->SERVER['servers'][$this->getCurrentSERVER()]['bases'][$this->getCurrentBASE()]['access']['passe'];
+		$server = $this->getCurrentSERVER();
+		$base = $this->getCurrentBASE();
+		if($server !== false && $base !== false) return $this->SERVER['servers'][$server]['bases'][$this->getCurrentBASE()]['access']['passe'];
+			else return false;
+	}
+
+	protected function getSAdminLogin($server, $base) {
+		$server = $this->getCurrentSERVER();
+		$base = $this->getCurrentBASE();
+		if($server !== false && $base !== false) return $this->SERVER['servers'][$server]['bases'][$base]['access']['login'];
+			else return false;
+	}
+
+	protected function getSAdminPasse($server, $base) {
+		$server = $this->getCurrentSERVER();
+		$base = $this->getCurrentBASE();
+		if($server !== false && $base !== false) return $this->SERVER['servers'][$server]['bases'][$base]['access']['passe'];
+			else return false;
 	}
 
 	/**
@@ -537,20 +561,21 @@ class filemakerservice2 {
 	 * @return boolean
 	 */
 	public function serverExists($servername) {
-		return array_key_exists($servername, $this->SERVER['servers']);
+		if(is_string($servername)) return array_key_exists($servername, $this->SERVER['servers']);
+			else return false;
 	}
 
 
 	/**
 	 * Est-ce que la base existe (et valide) sur le $servnom / ou le serveur courant
 	 * @param string $basenom
-	 * @param string $servnom
+	 * @param string $servnom - serveur par défaut si non précisé
 	 * @return boolean
 	 */
-	protected function isBaseExists($basenom, $servnom = null) {
+	protected function baseExists($basenom, $servnom = null) {
 		if($servnom === null) $servnom = $this->getCurrentSERVER();
-		if($this->serverExists($servnom)) {
-
+		if($this->serverExists($servnom) === true && is_string($servnom)) {
+			return array_key_exists($basenom, $this->SERVER['servers'][$servnom]['bases']);
 		} else return false;
 	}
 
@@ -751,8 +776,8 @@ class filemakerservice2 {
 		$FMbase = new FileMaker();
 		$FMbase->setProperty('hostspec', $IP);
 		$FMbase->setProperty('database', $basenom);
-		$FMbase->setProperty('username', $this->getSAdminCurrentLogin());
-		$FMbase->setProperty('password', $this->getSAdminCurrentPasse());
+		$FMbase->setProperty('username', $this->getSAdminLogin($servnom, $basenom));
+		$FMbase->setProperty('password', $this->getSAdminPasse($servnom, $basenom));
 		return $FMbase;
 	}
 
@@ -802,6 +827,11 @@ class filemakerservice2 {
 	 */
 	public function getName() {
 		return self::SERVICE_NOM;
+	}
+
+	public function getGlobalData($forceload = false) {
+		if($forceload === true) $this->getFilemakerserviceDataInSession();
+		return $this->SERVER;
 	}
 
 	/**
@@ -865,7 +895,7 @@ class filemakerservice2 {
 	}
 
 	/**
-	 * Récupère les données du service en session
+	 * Récupère les données du service placées en session
 	 * Renvoie false si aucun serveur n'est disponible
 	 * @param string $nom - nom des données (par défaut : valeur de self::SERVICE_NOM)
 	 * @return boolean
@@ -886,17 +916,6 @@ class filemakerservice2 {
 			if($serveur['statut'] === self::DEF_VALUE_ON || $onlyValids === false) $list[] = $servnom;
 		}
 		return $list;
-	}
-
-	/**
-	 * Vérifie si une base existe
-	 * @param string $basenom - nom de la base
-	 * @param string $servnom - nom du serveur (serveur courant si null)
-	 * @return boolean
-	 */
-	public function baseExists($basenom, $servnom = null) {
-		if($servnom === null) $servnom = $this->getCurrentSERVER();
-		return array_key_exists($basenom, $this->SERVER['servers'][$servnom]['bases']);
 	}
 
 	/**
@@ -954,7 +973,7 @@ class filemakerservice2 {
 			$this->FMbase = $this->getNewSadminFMobject($servnom, $basenom);
 			$this->FMfind = $this->FMbase->listScripts();
 			if ($this->FMbase->isError($this->FMfind)) {
-			    $records = "Accès non autorisé.";
+				$records = "Accès non autorisé.";
 			} else {
 				$records = $this->FMfind;
 			}
@@ -1124,13 +1143,19 @@ class filemakerservice2 {
 		if($BASEnom === null) $BASEnom = $this->getCurrentBASE($SERVnom);
 		
 		if(isset($this->SERVER['servers'][$SERVnom]['bases'][$BASEnom]['layouts'])) {
-			if(in_array($layout, $this->SERVER['servers'][$SERVnom]['bases'][$BASEnom]['layouts'])) {
-				if($this->setCurrentBASE($BASEnom, $SERVnom) !== false) {
-					$lay = $this->FMbaseUser->getLayout($layout);
-					$result = $lay->listFields();
+			if(array_key_exists($layout, $this->SERVER['servers'][$SERVnom]['bases'][$BASEnom]['layouts'])) {
+				// if($this->setCurrentBASE($BASEnom, $SERVnom) !== false) {
+					$this->FMbase = $this->getNewSadminFMobject($SERVnom, $BASEnom);
+					$lay = $this->FMbase->getLayout($layout);
+					if ($this->FMbase->isError($lay)) {
+						$result = $lay->getMessage();
+						// $result = "Accès non autorisé.";
+					} else if(is_object($lay)) {
+						$result = $lay->listFields();
+					}
 					// $result = $lay->getFields();
-					if(count($result) < 1) $result = "Aucun champ trouvé dans le modèle ".$layout.".";
-				} else $result = "Erreur au changement de base ou serveur.";
+					// if(is_array($result) && count($result) < 1) $result = "Aucun champ trouvé dans le modèle ".$layout.".";
+				// } else $result = "Erreur au changement de base ou serveur.";
 			} else $result = "Ce modèle n'existe pas.";
 		} else $result = "Base non reconnue.";
 		return $result;
@@ -1147,8 +1172,8 @@ class filemakerservice2 {
 		if($SERVnom === null) $SERVnom = $this->getCurrentSERVER();
 		if($BASEnom === null) $BASEnom = $this->getCurrentBASE($SERVnom);
 		
-		if(isset($this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'])) {
-			if(in_array($layout, $this->SERVER[$SERVnom]['databases']['valids'][$BASEnom]['layouts'])) {
+		if(isset($this->SERVER['servers'][$SERVnom]['bases'][$BASEnom]['layouts'])) {
+			if(array_key_exists($layout, $this->SERVER['servers'][$SERVnom]['bases'][$BASEnom]['layouts'])) {
 				if($this->setCurrentBASE($BASEnom, $SERVnom) !== false) {
 					$lay = $this->FMbaseUser->getLayout($layout);
 					// $result = $lay->listFields();
@@ -1481,7 +1506,7 @@ class filemakerservice2 {
 	 * affiche le contenu de $data (récursif)
 	 * @param mixed $data
 	 */
-	protected function affPreData($data, $nom = null) {
+	protected function getPreData($data, $nom = null) {
 		$texte = "";
 		$this->recurs++;
 		if($this->recurs <= $this->recursMAX) {
@@ -1499,7 +1524,7 @@ class filemakerservice2 {
 				case 'array':
 					$texte .= ("<div".$style.">");
 					$texte .= ($affNom."<i".$istyle.">".gettype($data)."</i> (".count($data).")");
-					foreach($data as $nom2 => $dat2) $texte .= $this->affPreData($dat2, $nom2);
+					foreach($data as $nom2 => $dat2) $texte .= $this->getPreData($dat2, $nom2);
 					$texte .= ("</div>");
 					break;
 				case 'object':
@@ -1517,7 +1542,7 @@ class filemakerservice2 {
 						else $affdata = '';
 					$texte .= ("<div".$style.">");
 					$texte .= ($affNom." <i".$istyle.">".gettype($data)." > ".get_class($data)."</i> ".$affdata); // [ ".implode(" ; ", $tab)." ]
-					foreach($tab as $nom2 => $dat2) $this->affPreData($dat2, $nom2);
+					foreach($tab as $nom2 => $dat2) $this->getPreData($dat2, $nom2);
 					$texte .= ("</div>");
 					break;
 				case 'string':
@@ -1562,7 +1587,7 @@ class filemakerservice2 {
 			if($titre !== null && is_string($titre) && strlen($titre) > 0) {
 				$texte .= ('<h3 style="margin-top:0px;padding-top:0px;border-bottom:1px dotted #999;margin-bottom:4px;">'.$titre.'</h3>');
 			}
-			$texte .= $this->affPreData($data);
+			$texte .= $this->getPreData($data);
 			$texte .= ("</div>");
 		}
 		$this->DEVdata[self::NOM_DEV_DATA_SHOW][] = $texte;
