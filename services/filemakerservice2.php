@@ -1594,18 +1594,21 @@ class filemakerservice2 {
 	}
 
 	protected function affAllDev() {
-		if($this->get('security.context')->isGranted('ROLE_SUPER_ADMIN') && ($this->isDev())) {
-			$devdd = $this->getDevData(self::NOM_DEV_DATA_SHOW);
-			if($devdd !== null) {
-				if(count($devdd) > 0) {
-					echo("<h2>Données DEV : </h2>");
-					foreach ($devdd as $key => $value) {
-						echo($value);
+		// if($this->container->get('request')->attributes->get('_controller') !== null) {
+			// if($this->container->get('security.context')->isGranted('ROLE_SUPER_ADMIN') && ($this->isDev())) {
+			if($this->isDev()) {
+				$devdd = $this->getDevData(self::NOM_DEV_DATA_SHOW);
+				if($devdd !== null) {
+					if(count($devdd) > 0) {
+						echo("<h2>Données DEV : </h2>");
+						foreach ($devdd as $key => $value) {
+							echo($value);
+						}
+						echo("<br><br><br><br>");
 					}
-					echo("<br><br><br><br>");
 				}
 			}
-		}
+		// }
 	}
 
 	private function test($data) {
